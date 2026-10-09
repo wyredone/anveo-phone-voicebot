@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anveo Phone VoiceBot Phase 0 User Guide</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --text: #1f2933;
+      --muted: #52606d;
+      --line: #d9e2ec;
+      --panel: #ffffff;
+      --accent: #0f766e;
+      --warn: #9a3412;
+      --danger: #991b1b;
+      --code-bg: #eef2f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.58;
+    }
+    header {
+      background: #102a43;
+      color: white;
+      padding: 30px 18px;
+    }
+    header .wrap, main {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { margin: 0 0 8px; font-size: 2.1rem; }
+    h2 {
+      margin: 36px 0 12px;
+      padding-bottom: 7px;
+      border-bottom: 2px solid var(--line);
+    }
+    h3 { margin: 24px 0 8px; }
+    main { padding: 24px 18px 54px; }
+    .subtitle { color: #d9e2ec; margin: 0; max-width: 820px; }
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+    .toc a {
+      display: block;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin: 16px 0;
+    }
+    .notice { border-left: 5px solid var(--warn); background: #fff7ed; }
+    .danger { border-left: 5px solid var(--danger); background: #fef2f2; }
+    .ok { border-left: 5px solid var(--accent); background: #ecfdf5; }
+    ol, ul { padding-left: 24px; }
+    li { margin: 8px 0; }
+    code {
+      color: #111827;
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.95em;
+    }
+    pre {
+      background: #111827;
+      color: #f9fafb;
+      padding: 14px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    pre code {
+      color: inherit;
+      background: transparent;
+      padding: 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      background: white;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eef2f7; }
+    .checks label {
+      display: block;
+      margin: 8px 0;
+    }
+    .small { color: var(--muted); font-size: 0.95rem; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Anveo Phone VoiceBot Phase 0 User Guide</h1>
+      <p class="subtitle">Setup, testing, logging, and troubleshooting guide for the standalone localhost PCM bridge between AnveoPhone and a separate receiver process.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="card notice">
+      <h2>Phase 0 Scope</h2>
+      <p>Phase 0 proves telephone audio only. It captures incoming caller PCM and sends back a test tone or a supplied WAV. It does not answer calls automatically, run AI, transcribe speech, select personas, or perform production receptionist logic.</p>
+    </section>
+
+    <ul class="toc">
+      <li><a href="#requirements">Requirements</a></li>
+      <li><a href="#quick-test">Quick Test</a></li>
+      <li><a href="#logged-tests">Logged Tests</a></li>
+      <li><a href="#live-call">Live Call Test</a></li>
+      <li><a href="#artifacts">Artifacts</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ul>
+
+    <section id="requirements">
+      <h2>Requirements</h2>
+      <table>
+        <tr><th>Item</th><th>Requirement</th></tr>
+        <tr><td>Operating system</td><td>Windows PC where AnveoPhone already works.</td></tr>
+        <tr><td>Python</td><td>Use the same Python interpreter that runs AnveoPhone and can import its matching <code>_pjsua2.pyd</code>.</td></tr>
+        <tr><td>AnveoPhone</td><td>Source folder containing <code>anveophone\app.py</code> and <code>pjsua2_backend.py</code>.</td></tr>
+        <tr><td>Auto-answer</td><td>Disable Auto-answer before live testing. Phase 0 expects manual answer.</td></tr>
+        <tr><td>Test caller</td><td>Use a test phone and a tester who knows caller audio may be captured.</td></tr>
+      </table>
+    </section>
+
+    <section id="quick-test">
+      <h2>Quick Test</h2>
+      <ol>
+        <li>Close the normal AnveoPhone app.</li>
+        <li>Disable AnveoPhone Auto-answer.</li>
+        <li>Open Command Prompt or PowerShell in the <code>anveo-phone-voicebot</code> folder.</li>
+        <li>Run the launcher with your real AnveoPhone path.</li>
+      </ol>
+      <pre><code>launch_phase0.bat "F:\anveophone"</code></pre>
+      <p>If needed, specify the exact Python executable:</p>
+      <pre><code>launch_phase0.bat "F:\anveophone" "C:\path\to\python.exe"</code></pre>
+      <p>The launcher runs diagnostics, starts the PCM server in a second window, and opens AnveoPhone with the bridge armed for one incoming answered call.</p>
+    </section>
+
+    <section id="logged-tests">
+      <h2>Logged Tests To Send Back</h2>
+      <p>Run this before or after the live call test when you want a full troubleshooting package.</p>
+      <pre><code>run_phase0_tests.bat "F:\anveophone"</code></pre>
+      <p>With explicit Python:</p>
+      <pre><code>run_phase0_tests.bat "F:\anveophone" "C:\path\to\python.exe"</code></pre>
+      <p>Advanced command line:</p>
+      <pre><code>python run_phase0_tests.py --anveophone "F:\anveophone" --voice-engine "F:\Voice-Engine"</code></pre>
+      <table>
+        <tr><th>Step</th><th>What It Checks</th></tr>
+        <tr><td><code>doctor</code></td><td>Python, platform, AnveoPhone source, PJSUA2 import, AudioMediaPort support, Qt availability.</td></tr>
+        <tr><td><code>portable_unit_tests</code></td><td>Protocol, localhost PCM transport, WAV capture, queue behavior, host routing logic.</td></tr>
+        <tr><td><code>native_smoke</code></td><td>Real PJSUA2 conference callbacks with generated audio and exact returned PCM.</td></tr>
+        <tr><td><code>native_sip</code></td><td>Local SIP/RTP call through the actual AnveoPhone backend without using Anveo credentials.</td></tr>
+      </table>
+      <p>The ZIP is created under:</p>
+      <pre><code>artifacts\test-runs\phase0-...\phase0-....zip</code></pre>
+    </section>
+
+    <section id="live-call">
+      <h2>Live Call Test</h2>
+      <ol>
+        <li>Run <code>launch_phase0.bat</code>.</li>
+        <li>Wait for AnveoPhone to register normally.</li>
+        <li>Call your Anveo number from a test phone.</li>
+        <li>Answer manually in AnveoPhone.</li>
+        <li>Confirm the Events panel shows <code>Live PCM connected</code>.</li>
+        <li>Confirm the caller hears the one-second test tone or supplied WAV.</li>
+        <li>Have the caller speak a clear phrase for at least five seconds.</li>
+        <li>Hang up and inspect the capture/report files.</li>
+      </ol>
+
+      <h3>Hotkeys</h3>
+      <table>
+        <tr><th>Key</th><th>Action</th></tr>
+        <tr><td><code>F8</code></td><td>Arm the next incoming answered call.</td></tr>
+        <tr><td><code>F9</code></td><td>Release the bridge and restore manual audio.</td></tr>
+      </table>
+
+      <h3>Use A Custom WAV Response</h3>
+      <p>Run the server separately if you want a spoken static response instead of the default tone. The WAV must be uncompressed 16,000 Hz mono 16-bit PCM and no longer than 30 seconds.</p>
+      <pre><code>python -m voicebot serve --wav "F:\test_response.wav"</code></pre>
+      <p>Then run the host in a second terminal with the same port/token defaults:</p>
+      <pre><code>python -m voicebot host --anveophone "F:\anveophone" --arm-next-call</code></pre>
+    </section>
+
+    <section id="artifacts">
+      <h2>Artifacts And Logs</h2>
+      <table>
+        <tr><th>Path</th><th>Purpose</th></tr>
+        <tr><td><code>artifacts\doctor.json</code></td><td>Diagnostic report from the launcher.</td></tr>
+        <tr><td><code>artifacts\calls\*.wav</code></td><td>Captured caller audio.</td></tr>
+        <tr><td><code>artifacts\calls\*.json</code></td><td>Per-call frame counts, signal stats, and reason for close.</td></tr>
+        <tr><td><code>artifacts\test-runs\phase0-...\logs\*.log</code></td><td>Logged output from each automated test step.</td></tr>
+        <tr><td><code>artifacts\test-runs\phase0-...\summary.json</code></td><td>Machine-readable test summary.</td></tr>
+        <tr><td><code>artifacts\test-runs\phase0-...\summary.md</code></td><td>Human-readable test summary.</td></tr>
+        <tr><td><code>artifacts\test-runs\phase0-...\phase0-....zip</code></td><td>Send-back package for troubleshooting.</td></tr>
+      </table>
+    </section>
+
+    <section class="card ok">
+      <h2>Acceptance Checklist</h2>
+      <div class="checks">
+        <label><input type="checkbox"> Use the exact Python executable that runs working AnveoPhone.</label>
+        <label><input type="checkbox"> Disable AnveoPhone Auto-answer.</label>
+        <label><input type="checkbox"> <code>doctor</code> passes binding and Qt checks.</label>
+        <label><input type="checkbox"> Incoming call rings normally and is answered manually.</label>
+        <label><input type="checkbox"> Events shows <code>Live PCM connected</code>.</label>
+        <label><input type="checkbox"> Caller hears the returned tone or WAV.</label>
+        <label><input type="checkbox"> Captured WAV contains the caller phrase.</label>
+        <label><input type="checkbox"> JSON report shows nonzero input and response frames.</label>
+        <label><input type="checkbox"> PC microphone and speaker are isolated while bridge owns the call.</label>
+        <label><input type="checkbox"> F9 releases the bridge and restores manual audio.</label>
+        <label><input type="checkbox"> A later call stays normal unless F8 arms another test.</label>
+      </div>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <table>
+        <tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr>
+        <tr>
+          <td><code>doctor</code> cannot import PJSUA2</td>
+          <td>Wrong Python interpreter, missing DLL dependency, or mismatched <code>_pjsua2.pyd</code>.</td>
+          <td>Run with the exact Python that your working AnveoPhone launcher uses.</td>
+        </tr>
+        <tr>
+          <td>Auto-answer error</td>
+          <td>AnveoPhone Auto-answer is still enabled.</td>
+          <td>Disable Auto-answer and rerun the launcher.</td>
+        </tr>
+        <tr>
+          <td>Port 8765 busy</td>
+          <td>Old PCM server window is still open, or another app owns the port.</td>
+          <td>Close old test windows, or use the same alternate <code>--port</code> for server and host.</td>
+        </tr>
+        <tr>
+          <td>No <code>Live PCM connected</code> event</td>
+          <td>Call was not armed, not confirmed, outgoing, held, or media object was unavailable.</td>
+          <td>Press F8 before the next incoming call, answer manually, then check logs.</td>
+        </tr>
+        <tr>
+          <td>Caller hears nothing</td>
+          <td>Bridge did not attach, response queue did not drain, or native callback failed.</td>
+          <td>Send the test-run ZIP and call JSON report.</td>
+        </tr>
+        <tr>
+          <td>No WAV capture</td>
+          <td>Capture disabled or no caller audio arrived.</td>
+          <td>Check the JSON report and rerun without <code>--no-capture</code>.</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card danger">
+      <h2>What Phase 0 Does Not Prove</h2>
+      <ul>
+        <li>It does not prove a human caller heard audio unless you verify it during a real test call.</li>
+        <li>It does not run Voice-Engine AI, STT, TTS, personas, or scheduling rules.</li>
+        <li>It does not answer calls automatically.</li>
+        <li>It does not make production decisions about which callers should be handled by the bot.</li>
+      </ul>
+    </section>
+
+    <p class="small">For the short version, open <a href="QUICKSTART.html">QUICKSTART.html</a>.</p>
+  </main>
+</body>
+</html>

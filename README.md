@@ -7,6 +7,11 @@ incoming caller PCM.
 
 ## Windows quick start
 
+HTML guides:
+
+1. [QuickStart](docs/QUICKSTART.html)
+2. [User Guide](docs/USER_GUIDE.html)
+
 1. Download/extract this repository. Keep the complete folder together.
 2. Close any running AnveoPhone instance. Use its working Python interpreter;
    the native `_pjsua2.pyd` must match that interpreter and its DLL dependencies.
