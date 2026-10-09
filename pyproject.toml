@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anveo-phone-voicebot"
+version = "0.0.1"
+description = "Phase 0 standalone localhost PCM bridge for AnveoPhone"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+anveo-voicebot = "voicebot.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["voicebot*"]
