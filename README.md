@@ -48,10 +48,14 @@ Use `serve --no-capture` to keep only signal statistics instead of WAV files.
 ## Validation
 
 1. Portable tests: `python -m unittest discover -s tests -v` or `test_phase0.bat`.
-2. Native conference test with a working PJSUA2 binding: `python tests/native_smoke.py`.
-3. Native SIP/RTP test with a working binding:
+2. Logged test bundle for troubleshooting:
+   `python run_phase0_tests.py --anveophone "F:\anveophone"` or
+   `run_phase0_tests.bat "F:\anveophone"`.
+   Send back the ZIP created under `artifacts/test-runs`.
+3. Native conference test with a working PJSUA2 binding: `python tests/native_smoke.py`.
+4. Native SIP/RTP test with a working binding:
    `python tests/native_sip.py --anveophone "F:\anveophone"`.
-4. Real Windows/Anveo acceptance checklist: [docs/PHASE0_CHECKLIST.md](docs/PHASE0_CHECKLIST.md).
+5. Real Windows/Anveo acceptance checklist: [docs/PHASE0_CHECKLIST.md](docs/PHASE0_CHECKLIST.md).
 
 A positive `bidirectional_pcm_observed` report shows that nonzero caller PCM arrived
 and response frames were sent. It does **not** certify that the caller heard them.
