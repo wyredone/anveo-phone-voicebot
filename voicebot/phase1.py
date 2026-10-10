@@ -233,14 +233,14 @@ class Phase1Responder:
         clean = " ".join(transcript.lower().split())
         if not clean:
             return "I heard audio, but I could not recognize the words yet. Please say your name and the reason for your call."
-        if any(word in clean for word in ("hello", "hi", "hey", "aloe")):
-            return "Hello. This is the Anveo voice bot test line. Please say your name and how I can help."
         if any(word in clean for word in ("appointment", "schedule", "booking", "book")):
             return "I heard that you are asking about scheduling. Please leave your name, phone number, and the appointment details."
         if any(word in clean for word in ("message", "voicemail", "call me", "callback", "call back")):
             return "I can take a message. Please say your name, phone number, and the message after the tone in a future phase."
         if any(word in clean for word in ("hours", "open", "close", "closed")):
             return "I heard a question about hours. Business-hours lookup is not connected yet, but the intent was detected."
+        if any(word in clean for word in ("hello", "hi", "hey", "aloe")):
+            return "Hello. This is the Anveo voice bot test line. Please say your name and how I can help."
         if len(clean) > 140:
             clean = clean[:137].rstrip() + "..."
         return f"I heard you say: {clean}. I do not have a business rule for that yet, but recognition is working."

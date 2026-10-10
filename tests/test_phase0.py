@@ -301,6 +301,7 @@ class Phase1Tests(unittest.TestCase):
             ("please call me back", "take a message"),
             ("what are your hours", "question about hours"),
             ("aloe 1234", "Please say your name"),
+            ("Aloe I needed dental an appointment", "asking about scheduling"),
         ]
         for phrase, expected in cases:
             responder = RuleResponder(phrase)
