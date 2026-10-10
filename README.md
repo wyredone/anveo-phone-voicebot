@@ -28,10 +28,10 @@ Menu launcher:
 2. Close any running AnveoPhone instance. Use its working Python interpreter;
    the native `_pjsua2.pyd` must match that interpreter and its DLL dependencies.
 3. In normal AnveoPhone settings, disable **Auto-answer** before this test.
-4. Open a terminal in this project and run
-   `launch_phase0.bat "F:\anveophone"` using your actual AnveoPhone source folder.
-   Supply its Python as a second argument if needed:
-   `launch_phase0.bat "F:\anveophone" "C:\path\to\python.exe"`.
+4. Open a terminal in this project and run `launch_phase0.bat`. The default
+   AnveoPhone folder is `E:\anveophone`; pass a different folder as the first
+   argument only if needed. Supply its Python as a second argument if needed:
+   `launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"`.
 5. Call your Anveo number from a test phone and **answer manually** in AnveoPhone.
    Speak for at least five seconds. The caller should hear a one-second 440 Hz tone.
 6. Hang up. Inspect `artifacts/calls/*.wav` and the corresponding JSON report.
@@ -66,7 +66,7 @@ Use `serve --no-capture` to keep only signal statistics instead of WAV files.
 
 Run from the menu with **H**, or directly:
 
-1. `launch_phase1.bat "F:\anveophone"`
+1. `launch_phase1.bat`
 2. Answer one incoming test call manually.
 3. Speak for at least a moment, then pause for about one second.
 4. Listen for the generated response. On Windows it should use SAPI speech by
@@ -83,14 +83,14 @@ Optional Piper setup before launching:
 ```bat
 set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
 set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
-launch_phase1.bat "F:\anveophone"
+launch_phase1.bat
 ```
 
 Optional Windows SAPI voice selection:
 
 ```bat
 set VOICEBOT_SAPI_VOICE=Microsoft Zira Desktop
-launch_phase1.bat "F:\anveophone"
+launch_phase1.bat
 ```
 
 The matching advanced server command is:

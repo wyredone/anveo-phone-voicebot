@@ -4,6 +4,7 @@ cd /d "%~dp0"
 
 set "APP_NAME=Anveo Phone VoiceBot"
 set "CONFIG_FILE=.local\phase0-launcher.env"
+set "DEFAULT_ANVEOPHONE_DIR=E:\anveophone"
 set "DEFAULT_PORT=8765"
 set "VOICEBOT_PORT=%DEFAULT_PORT%"
 
@@ -20,6 +21,7 @@ if not defined VOICEBOT_PYTHON (
 )
 
 if exist "C:\msys64\ucrt64\bin\python3.exe" set "PATH=C:\msys64\ucrt64\bin;%PATH%"
+if not defined ANVEOPHONE_DIR set "ANVEOPHONE_DIR=%DEFAULT_ANVEOPHONE_DIR%"
 if not defined VOICEBOT_PORT set "VOICEBOT_PORT=%DEFAULT_PORT%"
 
 :menu

@@ -157,11 +157,11 @@
         <li>Close the normal AnveoPhone app.</li>
         <li>Disable AnveoPhone Auto-answer.</li>
         <li>Open Command Prompt or PowerShell in the <code>anveo-phone-voicebot</code> folder.</li>
-        <li>Run the launcher with your real AnveoPhone path.</li>
+        <li>Run the launcher. It defaults to <code>E:\anveophone</code>; pass a path only if your AnveoPhone folder is somewhere else.</li>
       </ol>
-      <pre><code>launch_phase0.bat "F:\anveophone"</code></pre>
+      <pre><code>launch_phase0.bat</code></pre>
       <p>If needed, specify the exact Python executable:</p>
-      <pre><code>launch_phase0.bat "F:\anveophone" "C:\path\to\python.exe"</code></pre>
+      <pre><code>launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>The launcher runs diagnostics, starts the PCM server in a second window, and opens AnveoPhone with the bridge armed for one incoming answered call.</p>
       <p>The menu launcher <code>launch_app.bat</code> also exposes the Phase 1 response test as option <strong>H</strong>.</p>
     </section>
@@ -215,17 +215,17 @@
     <section id="phase1">
       <h2>Phase 1 Response Test</h2>
       <p>Phase 1 uses the proven PCM bridge, waits for a caller turn, then sends generated response audio back into the call. Use it after Phase 0 shows <code>bidirectional_pcm_observed: true</code>.</p>
-      <pre><code>launch_phase1.bat "F:\anveophone"</code></pre>
+      <pre><code>launch_phase1.bat</code></pre>
       <p>With the menu launcher, choose <strong>H</strong>. After answering the incoming call, speak briefly and pause for about one second. The caller should hear a response. On Windows, the default response uses SAPI speech. With Piper configured, Piper is used first. If local TTS fails, the response is a tone pattern.</p>
       <p>The Phase 1 server prepares response audio before it starts listening. Confirm the server window prints <code>phase1_response_prepared</code> before placing the call. <code>source: sapi</code> means spoken audio is ready; <code>fallback_tone_after_tts_error</code> means it will play the tone pattern and includes the local TTS error.</p>
       <p>The same run attempts local Windows speech recognition for the caller turn. The call report records <code>phase1_transcript_source</code>; <code>sapi</code> means recognized words were logged, and <code>none</code> means recognition returned nothing or failed. Any failure details are in <code>phase1_transcript_errors</code>.</p>
       <p>The launcher uses <code>--response-mode rules</code>, so the reply follows simple greeting, scheduling, message, and hours rules. Use <code>--response-mode echo</code> to repeat recognized caller text, or <code>--response-mode fixed</code> for the known static phrase while troubleshooting.</p>
       <pre><code>set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
 set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
-launch_phase1.bat "F:\anveophone"</code></pre>
+launch_phase1.bat</code></pre>
       <p>Optional Windows voice selection:</p>
       <pre><code>set VOICEBOT_SAPI_VOICE=Microsoft Zira Desktop
-launch_phase1.bat "F:\anveophone"</code></pre>
+launch_phase1.bat</code></pre>
       <p>Advanced server-only command:</p>
       <pre><code>python -m voicebot serve-ai --response-text "Hello. Phase one is connected."</code></pre>
       <p>The call report records <code>mode: phase1</code>, a placeholder transcript summary, response text, and response source.</p>

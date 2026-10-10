@@ -121,7 +121,7 @@
       <ol>
         <li>Extract or clone <code>anveo-phone-voicebot</code>.</li>
         <li>Keep the full folder together.</li>
-        <li>Know the path to your AnveoPhone source folder, for example <code>F:\anveophone</code>.</li>
+        <li>The launchers default to <code>E:\anveophone</code>. Know your AnveoPhone source folder path only if you need to override it.</li>
       </ol>
     </section>
 
@@ -139,9 +139,9 @@
     <section>
       <h2>3. Launch The Live Manual Call Test</h2>
       <p>From the same project folder, run:</p>
-      <pre><code>launch_phase0.bat "F:\anveophone"</code></pre>
+      <pre><code>launch_phase0.bat</code></pre>
       <p>If needed, specify Python:</p>
-      <pre><code>launch_phase0.bat "F:\anveophone" "C:\path\to\python.exe"</code></pre>
+      <pre><code>launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>This opens the PCM server and launches AnveoPhone with the Phase 0 bridge armed for one incoming call.</p>
       <p>You can also run the menu launcher with <code>launch_app.bat</code>; choose <strong>A</strong> for Phase 0 or <strong>H</strong> for the Phase 1 response test.</p>
     </section>
@@ -149,17 +149,17 @@
     <section>
       <h2>4. Optional Phase 1 Response Test</h2>
       <p>Phase 1 waits for caller audio, detects a pause, and returns generated audio through the same live PCM bridge. On Windows it uses built-in SAPI speech by default, with a fallback tone pattern if TTS fails.</p>
-      <pre><code>launch_phase1.bat "F:\anveophone"</code></pre>
+      <pre><code>launch_phase1.bat</code></pre>
       <p>Before calling, confirm the Phase 1 server window prints <code>phase1_response_prepared</code>. <code>source: sapi</code> means spoken audio is ready; <code>fallback_tone_after_tts_error</code> means the call will use the tone pattern and the error is printed in that same line.</p>
       <p>The same test also tries local Windows speech recognition. After the call, check the JSON report for <code>phase1_transcript_source</code>. <code>sapi</code> means caller words were recognized; <code>none</code> means the report kept the signal summary and may include recognition errors.</p>
       <p>By default, the launcher uses <code>--response-mode rules</code>, so the spoken reply should follow simple greeting, scheduling, message, and hours rules. Use <code>--response-mode echo</code> when you want it to repeat the recognized words for diagnosis.</p>
       <p>Optional spoken response with Piper:</p>
       <pre><code>set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
 set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
-launch_phase1.bat "F:\anveophone"</code></pre>
+launch_phase1.bat</code></pre>
       <p>Optional Windows voice selection:</p>
       <pre><code>set VOICEBOT_SAPI_VOICE=Microsoft Zira Desktop
-launch_phase1.bat "F:\anveophone"</code></pre>
+launch_phase1.bat</code></pre>
     </section>
 
     <section>
