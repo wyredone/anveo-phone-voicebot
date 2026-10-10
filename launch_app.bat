@@ -40,32 +40,49 @@ echo   VoiceEngine:%VOICEBOT_ENGINE_DIR%
 echo   VE Config:  %VOICEBOT_ENGINE_CONFIG%
 echo   VE Persona: %VOICEBOT_ENGINE_PERSONA%
 echo.
-echo (A) Run live Phase 0 call test
-echo (B) Run logged test bundle
-echo (C) Run diagnostics only
-echo (D) Start PCM server only
-echo (E) Start AnveoPhone host only
-echo (F) Open QuickStart/User Guide
-echo (G) Settings
-echo (H) Run Phase 1 response test
-echo (I) Run Phase 3 appointment test
-echo (J) Run Voice-Engine API test
+echo (A) Start Voice-Engine call test
+echo (B) Start local appointment fallback
+echo (C) Run diagnostics
+echo (D) Settings
+echo (E) Open QuickStart/User Guide
+echo (X) Advanced tools
 echo (Q) Quit
 echo.
-choice /c ABCDEFGHIJQ /n /m "Choose: "
+choice /c ABCDEXQ /n /m "Choose: "
 set "MENU_CHOICE=%ERRORLEVEL%"
-if "%MENU_CHOICE%"=="1" goto live_test
-if "%MENU_CHOICE%"=="2" goto logged_tests
+if "%MENU_CHOICE%"=="1" goto engine_test
+if "%MENU_CHOICE%"=="2" goto phase3_test
 if "%MENU_CHOICE%"=="3" goto diagnostics
-if "%MENU_CHOICE%"=="4" goto server_only
-if "%MENU_CHOICE%"=="5" goto host_only
-if "%MENU_CHOICE%"=="6" goto docs
-if "%MENU_CHOICE%"=="7" goto settings
-if "%MENU_CHOICE%"=="8" goto phase1_test
-if "%MENU_CHOICE%"=="9" goto phase3_test
-if "%MENU_CHOICE%"=="10" goto engine_test
-if "%MENU_CHOICE%"=="11" goto end
+if "%MENU_CHOICE%"=="4" goto settings
+if "%MENU_CHOICE%"=="5" goto docs
+if "%MENU_CHOICE%"=="6" goto advanced_menu
+if "%MENU_CHOICE%"=="7" goto end
 goto menu
+
+:advanced_menu
+cls
+echo %APP_NAME% - Advanced Tools
+echo.
+echo These are older phase/debug tools. Use the main menu for normal testing.
+echo.
+echo (1) Phase 0 tone/capture bridge test
+echo (2) Phase 1 local speech response test
+echo (3) PCM server only
+echo (4) AnveoPhone host only
+echo (5) Logged test bundle
+echo (B) Back
+echo (Q) Quit
+echo.
+choice /c 12345BQ /n /m "Choose: "
+set "ADV_CHOICE=%ERRORLEVEL%"
+if "%ADV_CHOICE%"=="1" goto live_test
+if "%ADV_CHOICE%"=="2" goto phase1_test
+if "%ADV_CHOICE%"=="3" goto server_only
+if "%ADV_CHOICE%"=="4" goto host_only
+if "%ADV_CHOICE%"=="5" goto logged_tests
+if "%ADV_CHOICE%"=="6" goto menu
+if "%ADV_CHOICE%"=="7" goto end
+goto advanced_menu
 
 :require_anveophone
 if defined ANVEOPHONE_DIR exit /b 0
