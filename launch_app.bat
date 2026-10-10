@@ -41,9 +41,10 @@ echo (E) Start AnveoPhone host only
 echo (F) Open QuickStart/User Guide
 echo (G) Settings
 echo (H) Run Phase 1 response test
+echo (I) Run Phase 3 appointment test
 echo (Q) Quit
 echo.
-choice /c ABCDEFGHQ /n /m "Choose: "
+choice /c ABCDEFGHIQ /n /m "Choose: "
 set "MENU_CHOICE=%ERRORLEVEL%"
 if "%MENU_CHOICE%"=="1" goto live_test
 if "%MENU_CHOICE%"=="2" goto logged_tests
@@ -53,7 +54,8 @@ if "%MENU_CHOICE%"=="5" goto host_only
 if "%MENU_CHOICE%"=="6" goto docs
 if "%MENU_CHOICE%"=="7" goto settings
 if "%MENU_CHOICE%"=="8" goto phase1_test
-if "%MENU_CHOICE%"=="9" goto end
+if "%MENU_CHOICE%"=="9" goto phase3_test
+if "%MENU_CHOICE%"=="10" goto end
 goto menu
 
 :require_anveophone
@@ -183,6 +185,47 @@ if not "%VOICEBOT_PIPER_MODEL%"=="" (
     )
 ) else (
     start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode rules --tts-backend auto --stt-backend auto %VOICEBOT_SAPI_ARGS%"
+)
+echo.
+echo Starting AnveoPhone host. Answer one incoming test call manually.
+echo F8 arms another call. F9 restores manual audio.
+echo.
+"%VOICEBOT_PYTHON%" -m voicebot host --anveophone "%ANVEOPHONE_DIR%" --arm-next-call --port %VOICEBOT_PORT%
+echo.
+pause
+goto menu
+
+:phase3_test
+call :require_anveophone
+if errorlevel 1 goto menu
+echo.
+echo Close the normal AnveoPhone app before continuing.
+echo Disable AnveoPhone Auto-answer before this test.
+echo Say hello, ask for a dental appointment, then answer the follow-up questions.
+echo.
+pause
+call :doctor
+if errorlevel 1 (
+    echo.
+    echo Diagnostic failed. See artifacts\doctor.json.
+    pause
+    goto menu
+)
+echo.
+echo Starting Phase 3 appointment server window on port %VOICEBOT_PORT%...
+if not "%VOICEBOT_SAPI_VOICE%"=="" (
+    set "VOICEBOT_SAPI_ARGS=--sapi-voice "%VOICEBOT_SAPI_VOICE%""
+) else (
+    set "VOICEBOT_SAPI_ARGS="
+)
+if not "%VOICEBOT_PIPER_MODEL%"=="" (
+    if not "%VOICEBOT_PIPER_CONFIG%"=="" (
+        start "VoiceBot Phase 3 Appointment PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode appointment --tts-backend auto --stt-backend auto --piper-model "%VOICEBOT_PIPER_MODEL%" --piper-config "%VOICEBOT_PIPER_CONFIG%" %VOICEBOT_SAPI_ARGS%"
+    ) else (
+        start "VoiceBot Phase 3 Appointment PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode appointment --tts-backend auto --stt-backend auto --piper-model "%VOICEBOT_PIPER_MODEL%" %VOICEBOT_SAPI_ARGS%"
+    )
+) else (
+    start "VoiceBot Phase 3 Appointment PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode appointment --tts-backend auto --stt-backend auto %VOICEBOT_SAPI_ARGS%"
 )
 echo.
 echo Starting AnveoPhone host. Answer one incoming test call manually.

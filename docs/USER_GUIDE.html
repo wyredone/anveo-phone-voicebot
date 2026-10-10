@@ -126,7 +126,7 @@
     <section class="card notice">
       <h2>Phase 0 Scope</h2>
       <p>Phase 0 proves telephone audio only. It captures incoming caller PCM and sends back a test tone or a supplied WAV. It does not answer calls automatically, run AI, transcribe speech, select personas, or perform production receptionist logic.</p>
-      <p>Phase 1 is available as an opt-in response loop. It detects caller speech, waits for a pause, and sends generated return audio. It can use built-in Windows SAPI speech or Piper for local TTS, but does not yet perform real STT or persona/brain logic.</p>
+      <p>Phase 1 is available as an opt-in response loop. It detects caller speech, waits for a pause, and sends generated return audio. Phase 3 adds a local multi-turn dental appointment test flow using the same bridge.</p>
     </section>
 
     <ul class="toc">
@@ -135,6 +135,7 @@
       <li><a href="#logged-tests">Logged Tests</a></li>
       <li><a href="#live-call">Live Call Test</a></li>
       <li><a href="#phase1">Phase 1 Response Test</a></li>
+      <li><a href="#phase3">Phase 3 Appointment Test</a></li>
       <li><a href="#artifacts">Artifacts</a></li>
       <li><a href="#troubleshooting">Troubleshooting</a></li>
     </ul>
@@ -163,7 +164,7 @@
       <p>If needed, specify the exact Python executable:</p>
       <pre><code>launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>The launcher runs diagnostics, starts the PCM server in a second window, and opens AnveoPhone with the bridge armed for one incoming answered call.</p>
-      <p>The menu launcher <code>launch_app.bat</code> also exposes the Phase 1 response test as option <strong>H</strong>.</p>
+      <p>The menu launcher <code>launch_app.bat</code> also exposes the Phase 1 response test as option <strong>H</strong> and the Phase 3 appointment test as option <strong>I</strong>.</p>
     </section>
 
     <section id="logged-tests">
@@ -229,6 +230,14 @@ launch_phase1.bat</code></pre>
       <p>Advanced server-only command:</p>
       <pre><code>python -m voicebot serve-ai --response-text "Hello. Phase one is connected."</code></pre>
       <p>The call report records <code>mode: phase1</code>, a placeholder transcript summary, response text, and response source.</p>
+    </section>
+
+    <section id="phase3">
+      <h2>Phase 3 Appointment Test</h2>
+      <p>Phase 3 uses local rules to collect a simple dental appointment request over multiple caller turns. It is still a test flow: it logs the summary but does not send it anywhere.</p>
+      <pre><code>launch_phase3.bat</code></pre>
+      <p>With the menu launcher, choose <strong>I</strong>. After answering the incoming call, try saying <code>Hello, I need a dental appointment</code>, then answer the name and preferred day/time prompts.</p>
+      <p>The call report records <code>mode: phase3</code>, <code>phase_interactions</code>, and <code>appointment_summary</code> with the detected intent, caller name, requested time, notes, and dialogue stage.</p>
     </section>
 
     <section id="artifacts">

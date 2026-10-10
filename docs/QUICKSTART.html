@@ -106,7 +106,7 @@
   <header>
     <div class="wrap">
       <h1>Anveo Phone VoiceBot QuickStart</h1>
-      <p class="subtitle">Fast Windows test guide for proving live bidirectional telephone audio. Phase 0 sends a test tone or WAV and captures caller PCM. Phase 1 adds an opt-in caller-turn response loop.</p>
+      <p class="subtitle">Fast Windows test guide for proving live bidirectional telephone audio. Phase 0 sends a test tone or WAV, Phase 1 adds a caller-turn response loop, and Phase 3 adds a local appointment test flow.</p>
     </div>
   </header>
 
@@ -143,7 +143,7 @@
       <p>If needed, specify Python:</p>
       <pre><code>launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>This opens the PCM server and launches AnveoPhone with the Phase 0 bridge armed for one incoming call.</p>
-      <p>You can also run the menu launcher with <code>launch_app.bat</code>; choose <strong>A</strong> for Phase 0 or <strong>H</strong> for the Phase 1 response test.</p>
+      <p>You can also run the menu launcher with <code>launch_app.bat</code>; choose <strong>A</strong> for Phase 0, <strong>H</strong> for Phase 1, or <strong>I</strong> for the Phase 3 appointment test.</p>
     </section>
 
     <section>
@@ -163,19 +163,26 @@ launch_phase1.bat</code></pre>
     </section>
 
     <section>
-      <h2>5. Make The Test Call</h2>
+      <h2>5. Optional Phase 3 Appointment Test</h2>
+      <p>Phase 3 keeps listening after the first response and runs a local dental appointment collection flow. It logs each recognized turn and response.</p>
+      <pre><code>launch_phase3.bat</code></pre>
+      <p>Try saying: <code>Hello, I need a dental appointment</code>. Then answer the name and preferred day/time prompts. Check the JSON report for <code>mode: phase3</code>, <code>phase_interactions</code>, and <code>appointment_summary</code>.</p>
+    </section>
+
+    <section>
+      <h2>6. Make The Test Call</h2>
       <ol>
         <li>Call your Anveo number from a test phone.</li>
         <li>Answer manually in AnveoPhone.</li>
         <li>Confirm the Events panel says <code>Live PCM connected</code>.</li>
-        <li>For Phase 0, the caller should hear a one-second 440 Hz tone. For Phase 1, speak and pause, then listen for the response.</li>
+        <li>For Phase 0, the caller should hear a one-second 440 Hz tone. For Phase 1 or Phase 3, speak and pause, then listen for the response.</li>
         <li>Speak a clear phrase for at least five seconds.</li>
         <li>Hang up.</li>
       </ol>
     </section>
 
     <section>
-      <h2>6. Check Output</h2>
+      <h2>7. Check Output</h2>
       <table>
         <tr>
           <th>File</th>

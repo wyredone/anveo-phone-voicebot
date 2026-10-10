@@ -8,7 +8,8 @@ incoming caller PCM.
 Phase 1 has started as an opt-in response loop: after the caller speaks and pauses,
 the receiver generates return audio and sends it through the same live PCM bridge.
 It can use Piper when configured, Windows SAPI speech by default on Windows, or a
-distinct fallback tone pattern. It does not yet perform real STT or persona logic.
+distinct fallback tone pattern. Phase 3 adds a local appointment test flow that
+can collect a simple dental appointment request over multiple turns.
 
 ## Windows quick start
 
@@ -21,8 +22,8 @@ Menu launcher:
 
 1. `launch_app.bat`
 2. Optional first run with paths: `launch_app.bat "F:\anveophone" "C:\path\to\python.exe"`
-3. Choose **A** for the proven Phase 0 tone/capture test, or **H** for the Phase 1
-   caller-turn response test.
+3. Choose **A** for the proven Phase 0 tone/capture test, **H** for the Phase 1
+   caller-turn response test, or **I** for the Phase 3 appointment test.
 
 1. Download/extract this repository. Keep the complete folder together.
 2. Close any running AnveoPhone instance. Use its working Python interpreter;
@@ -112,6 +113,19 @@ details. The launcher now runs `--response-mode rules`, so the spoken response u
 simple receptionist-style rules for greetings, scheduling, messages and hours. Use
 `--response-mode echo` to repeat recognized caller text, or `--response-mode fixed`
 to keep the known static phrase.
+
+## Phase 3 appointment test
+
+Run from the menu with **I**, or directly:
+
+1. `launch_phase3.bat`
+2. Answer one incoming test call manually.
+3. Say hello, ask for a dental appointment, then answer the follow-up prompts.
+4. Hang up and inspect `artifacts/calls/*.json`.
+
+The report includes `mode: phase3`, `phase_interactions`, and an
+`appointment_summary` with the detected intent, caller name when captured, requested
+time when captured, notes, and current dialogue stage.
 
 ## Validation
 

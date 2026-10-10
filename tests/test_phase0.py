@@ -14,7 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from voicebot.host import HostBridge
-from voicebot.phase1 import (Phase1Responder, TurnDetector, _SAPI_RECOGNITION_SCRIPT,
+from voicebot.phase1 import (AppointmentDialog, Phase1Responder, TurnDetector, _SAPI_RECOGNITION_SCRIPT,
                              prepare_stt_pcm, wav_to_bridge_pcm)
 from voicebot.pcm import AudioBuffers, FORMAT, FRAME_BYTES, RATE, tone, wav_pcm
 from voicebot.pjsip_port import create_port, require_capabilities
@@ -308,6 +308,43 @@ class Phase1Tests(unittest.TestCase):
             response = responder.respond(tone(0.4, 660))
             self.assertIn(expected, response.text)
             self.assertEqual(response.text, responder.last_text)
+
+    def test_appointment_dialog_collects_summary(self):
+        dialog = AppointmentDialog()
+        text, summary = dialog.handle("hello")
+        self.assertIn("Please say your name", text)
+        self.assertEqual(summary["stage"], "collect_reason")
+
+        text, summary = dialog.handle("this is Sam and I need a dental appointment")
+        self.assertIn("What day and time", text)
+        self.assertEqual(summary["intent"], "appointment")
+        self.assertEqual(summary["caller_name"], "Sam")
+
+        text, summary = dialog.handle("tomorrow morning")
+        self.assertIn("appointment request", text)
+        self.assertEqual(summary["stage"], "confirm")
+        self.assertEqual(summary["requested_time"], "tomorrow morning")
+
+    def test_appointment_response_returns_metadata(self):
+        class AppointmentResponder(Phase1Responder):
+            def __init__(self, transcript):
+                super().__init__("Fixed text.", tts_backend="sapi", stt_backend="sapi",
+                                 response_mode="appointment")
+                self.rule_transcript = transcript
+
+            def _recognize(self, backend, caller_pcm):
+                return self.rule_transcript
+
+            def _synthesize(self, backend, text):
+                self.last_text = text
+                return tone(0.02, 880)
+
+        responder = AppointmentResponder("this is Sam I need a dental appointment tomorrow morning")
+        response = responder.respond(tone(0.4, 660))
+        self.assertIn("appointment request", response.text)
+        self.assertEqual(response.metadata["intent"], "appointment")
+        self.assertEqual(response.metadata["caller_name"], "Sam")
+        self.assertEqual(response.metadata["requested_time"], "appointment tomorrow morning")
 
     def test_bad_response_mode_rejected(self):
         with self.assertRaises(ValueError):

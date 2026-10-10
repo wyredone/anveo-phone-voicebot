@@ -80,12 +80,15 @@ class BridgeServer:
         wav = wave.open(str(capture_path), "wb") if self.capture else None
         if wav:
             wav.setparams((1, 2, RATE, 0, "NONE", "not compressed"))
+        mode = "phase3" if getattr(self.responder, "response_mode", "") == "appointment" else ("phase1" if self.responder else "phase0")
         report = {"session_id": session_id, "format": FORMAT, "rx_frames": 0, "tx_frames": 0,
                   "nonzero_samples": 0, "peak": 0, "sum_squares": 0,
                   "capture_path": str(capture_path) if wav else None, "reason": "disconnect",
-                  "mode": "phase1" if self.responder else "phase0"}
+                  "mode": mode}
         sock.sendall(encode({"type": "ready", "session_id": session_id}))
         print(json.dumps({"event": "session_open", "session_id": session_id}), flush=True)
+        if self.responder:
+            self.responder.start_session(session_id)
         detector = TurnDetector() if self.responder else None
         active_response = None if self.responder else self.response
         response_text = ""
@@ -93,6 +96,8 @@ class BridgeServer:
         transcript = ""
         transcript_source = ""
         transcript_errors = []
+        interactions = []
+        appointment_summary = {}
         deadline = time.monotonic() + (1.0 if active_response is not None else 3600.0)
         last_rx = time.monotonic()
         offset = 0
@@ -126,8 +131,15 @@ class BridgeServer:
                             transcript = generated.transcript
                             transcript_source = generated.transcript_source
                             transcript_errors = generated.transcript_errors
+                            appointment_summary = generated.metadata
+                            interactions.append({"transcript": transcript,
+                                                 "transcript_source": transcript_source,
+                                                 "response_text": response_text,
+                                                 "response_source": response_source,
+                                                 "metadata": generated.metadata})
                             deadline = time.monotonic()
-                            print(json.dumps({"event": "phase1_response_ready", "session_id": session_id,
+                            event_name = "phase3_response_ready" if report["mode"] == "phase3" else "phase1_response_ready"
+                            print(json.dumps({"event": event_name, "session_id": session_id,
                                               "source": response_source, "text": response_text,
                                               "transcript": transcript, "transcript_source": transcript_source,
                                               "frames": frame_count(active_response)}), flush=True)
@@ -144,6 +156,11 @@ class BridgeServer:
                     if offset >= len(active_response):
                         sock.sendall(encode({"type": "audio_end", "session_id": session_id,
                                              "frames": report["tx_frames"]}))
+                        if self.responder:
+                            active_response = None
+                            offset = 0
+                            detector.reset()
+                            deadline = time.monotonic() + 3600.0
         finally:
             if wav:
                 wav.close()
@@ -159,6 +176,9 @@ class BridgeServer:
                 report["phase1_transcript_errors"] = transcript_errors
                 report["phase1_response_text"] = response_text
                 report["phase1_response_source"] = response_source
+                report["phase_interactions"] = interactions
+                if appointment_summary:
+                    report["appointment_summary"] = appointment_summary
             report_path = self.output_dir / (capture_id + ".json")
             report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
             self.reports.append(report)

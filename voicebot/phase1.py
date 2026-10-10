@@ -8,7 +8,7 @@ import subprocess
 import struct
 import tempfile
 import wave
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .pcm import FRAME_BYTES, RATE, tone
@@ -140,6 +140,7 @@ class VoiceResponse:
     transcript: str
     transcript_source: str
     transcript_errors: list[dict[str, str]]
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -156,6 +157,137 @@ class Transcript:
     errors: list[dict[str, str]]
 
 
+class AppointmentDialog:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.stage = "opening"
+        self.intent = ""
+        self.caller_name = ""
+        self.requested_time = ""
+        self.notes = ""
+        self.turns: list[dict[str, str]] = []
+
+    def handle(self, transcript: str) -> tuple[str, dict[str, object]]:
+        clean = " ".join(transcript.split())
+        lowered = clean.lower()
+        if not clean:
+            text = "I heard audio, but I could not recognize the words yet. Please say your name and the reason for your call."
+            return text, self.summary()
+
+        if self._is_appointment(lowered):
+            self.intent = "appointment"
+        if not self.caller_name:
+            self.caller_name = self._extract_name(clean)
+        if not self.requested_time:
+            self.requested_time = self._extract_time(clean)
+        if not self.notes and self._is_appointment(lowered):
+            self.notes = clean
+
+        if self.stage == "opening":
+            if self.intent == "appointment":
+                if not self.caller_name:
+                    self.stage = "collect_name"
+                    text = "Sure, I can help with a dental appointment request. What name should I put on it?"
+                elif not self.requested_time:
+                    self.stage = "collect_time"
+                    text = f"Thanks {self.caller_name}. What day and time would work best for the dental appointment?"
+                else:
+                    self.stage = "confirm"
+                    text = self._confirmation()
+            elif self._is_greeting(lowered):
+                self.stage = "collect_reason"
+                text = "Hello. This is the Anveo voice bot test line. Please say your name and how I can help."
+            else:
+                self.stage = "collect_reason"
+                text = "Thanks. I can help collect an appointment request, message, or hours question. What do you need today?"
+        elif self.stage == "collect_reason":
+            if self.intent == "appointment":
+                if not self.caller_name:
+                    self.stage = "collect_name"
+                    text = "Sure, I can help with a dental appointment request. What name should I put on it?"
+                elif not self.requested_time:
+                    self.stage = "collect_time"
+                    text = f"Thanks {self.caller_name}. What day and time would work best?"
+                else:
+                    self.stage = "confirm"
+                    text = self._confirmation()
+            else:
+                text = "I captured that. For this Phase three test, please try saying that you need a dental appointment."
+        elif self.stage == "collect_name":
+            if not self.caller_name:
+                self.caller_name = clean
+            if not self.requested_time:
+                self.stage = "collect_time"
+                text = f"Thanks {self.caller_name}. What day and time would work best?"
+            else:
+                self.stage = "confirm"
+                text = self._confirmation()
+        elif self.stage == "collect_time":
+            if not self.requested_time:
+                self.requested_time = clean
+            self.stage = "confirm"
+            text = self._confirmation()
+        else:
+            text = "Thanks. I already have the appointment request summary for this Phase three test."
+
+        self.turns.append({"transcript": clean, "response": text, "stage": self.stage})
+        return text, self.summary()
+
+    def summary(self) -> dict[str, object]:
+        return {
+            "stage": self.stage,
+            "intent": self.intent,
+            "caller_name": self.caller_name,
+            "requested_time": self.requested_time,
+            "notes": self.notes,
+            "turn_count": len(self.turns),
+        }
+
+    def _confirmation(self) -> str:
+        name = self.caller_name or "the caller"
+        when = self.requested_time or "the requested time"
+        return f"Got it. I have an appointment request for {name}, preferred time {when}. A future phase will send this to the office."
+
+    @staticmethod
+    def _is_greeting(text: str) -> bool:
+        return any(word in text for word in ("hello", "hi", "hey", "aloe"))
+
+    @staticmethod
+    def _is_appointment(text: str) -> bool:
+        return any(word in text for word in ("appointment", "schedule", "booking", "book", "dentist", "dental"))
+
+    @staticmethod
+    def _extract_name(text: str) -> str:
+        lowered = text.lower()
+        markers = ("my name is ", "this is ", "i am ", "i'm ")
+        for marker in markers:
+            index = lowered.find(marker)
+            if index >= 0:
+                candidate = text[index + len(marker):].strip(" .,!?:;")
+                lower_candidate = candidate.lower()
+                stops = [lower_candidate.find(stop) for stop in (" and ", " i need", " need ", " calling ") if lower_candidate.find(stop) >= 0]
+                if stops:
+                    candidate = candidate[:min(stops)].strip(" .,!?:;")
+                words = candidate.split()
+                if words:
+                    return " ".join(words[:3])
+        return ""
+
+    @staticmethod
+    def _extract_time(text: str) -> str:
+        lowered = text.lower()
+        words = text.split()
+        day_words = {"today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday",
+                     "saturday", "sunday", "morning", "afternoon", "evening", "noon"}
+        for word in words:
+            cleaned = word.lower().strip(".,!?")
+            if cleaned in day_words or any(char.isdigit() for char in cleaned):
+                return " ".join(words[max(0, words.index(word) - 1):min(len(words), words.index(word) + 4)])
+        return ""
+
+
 class Phase1Responder:
     def __init__(self, response_text: str | None = None, piper_model: str | None = None,
                  piper_config: str | None = None, piper_exe: str = "piper",
@@ -167,8 +299,8 @@ class Phase1Responder:
             raise ValueError("tts_backend must be one of: auto, piper, sapi, tone")
         if stt_backend not in {"auto", "sapi", "off"}:
             raise ValueError("stt_backend must be one of: auto, sapi, off")
-        if response_mode not in {"fixed", "echo", "rules"}:
-            raise ValueError("response_mode must be one of: fixed, echo, rules")
+        if response_mode not in {"fixed", "echo", "rules", "appointment"}:
+            raise ValueError("response_mode must be one of: fixed, echo, rules, appointment")
         self.response_text = response_text or "Hello. Phase one is connected. I heard you through the phone bridge."
         self.piper_model = piper_model
         self.piper_config = piper_config
@@ -182,6 +314,10 @@ class Phase1Responder:
         self.stt_timeout = max(1.0, stt_timeout)
         self.response_mode = response_mode
         self._prepared: PreparedAudio | None = None
+        self.appointment_dialog = AppointmentDialog()
+
+    def start_session(self, session_id: str):
+        self.appointment_dialog.reset()
 
     def prepare(self) -> PreparedAudio:
         if self._prepared:
@@ -207,19 +343,28 @@ class Phase1Responder:
             response_text = self.response_text
             prepared = self.prepare()
         else:
-            response_text = (self._rules_response_text(transcript.text)
-                             if self.response_mode == "rules"
-                             else self._echo_response_text(transcript.text))
+            metadata: dict[str, object] = {}
+            if self.response_mode == "rules":
+                response_text = self._rules_response_text(transcript.text)
+            elif self.response_mode == "appointment":
+                response_text, metadata = self.appointment_dialog.handle(transcript.text)
+            else:
+                response_text = self._echo_response_text(transcript.text)
             prepared = self._build_response_audio(response_text)
-            print(json.dumps({"event": "phase2_dynamic_response_prepared",
+            event_name = "phase3_appointment_response_prepared" if self.response_mode == "appointment" else "phase2_dynamic_response_prepared"
+            event = {"event": event_name,
                               "source": prepared.source,
                               "frames": frame_count(prepared.pcm),
                               "seconds": round(len(prepared.pcm) / (RATE * 2), 3),
-                              "text": response_text}), flush=True)
+                              "text": response_text}
+            if metadata:
+                event["appointment"] = metadata
+            print(json.dumps(event), flush=True)
         return VoiceResponse(pcm=prepared.pcm, text=response_text,
                              source=prepared.source, transcript=transcript_text,
                              transcript_source=transcript.source,
-                             transcript_errors=transcript.errors)
+                             transcript_errors=transcript.errors,
+                             metadata=metadata if self.response_mode == "appointment" else {})
 
     def _echo_response_text(self, transcript: str) -> str:
         clean = " ".join(transcript.split())
