@@ -78,17 +78,27 @@ class HostBridge:
         self.call.set_monitor(False)
         self.engine.be.stop_playback()
         self.engine.be.stop_preview()
+        capture, speaker = self._disconnect_pc_routes(media)
+        media.startTransmit(self.port)
+        self.port.startTransmit(media)
+        self.log("Live PCM connected; PC microphone and speaker isolated.")
+
+    def _disconnect_pc_routes(self, media):
         adm = self.pj.Endpoint.instance().audDevManager()
         capture = adm.getCaptureDevMedia()
         speaker = adm.getPlaybackDevMedia()
-        # Backend mute helpers swallow native errors. Verify actual conference routing.
+        for source, target in ((capture, media), (media, speaker)):
+            try:
+                source.stopTransmit(target)
+            except Exception:
+                pass
+        # Backend mute helpers can swallow native errors or leave a conference link active.
+        # Verify actual routing after explicitly removing the PC microphone/speaker links.
         if media.getPortId() in list(capture.getPortInfo().listeners):
             raise RuntimeError("PC microphone is still connected to call")
         if speaker.getPortId() in list(media.getPortInfo().listeners):
             raise RuntimeError("Call is still connected to PC speaker")
-        media.startTransmit(self.port)
-        self.port.startTransmit(media)
-        self.log("Live PCM connected; PC microphone and speaker isolated.")
+        return capture, speaker
 
     def _detach(self):
         if self.port is not None and self.media is not None and not self.call.ended:

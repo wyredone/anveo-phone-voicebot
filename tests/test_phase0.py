@@ -309,6 +309,27 @@ class PortAndHostTests(unittest.TestCase):
         self.assertEqual((call.muted, call.monitor), (False, True))
         self.assertIsNone(host.port)
 
+    def test_attach_removes_pc_routes_when_backend_mute_leaves_links(self):
+        pj = fake_pj()
+        capture = pj.Endpoint.instance().audDevManager().getCaptureDevMedia()
+        speaker = pj.Endpoint.instance().audDevManager().getPlaybackDevMedia()
+        media = FakeMedia()
+        capture.startTransmit(media)
+        media.startTransmit(speaker)
+        call = SimpleNamespace(muted=False, monitor=True, ended=False)
+        call.set_mute = lambda value: setattr(call, "muted", value)
+        call.set_monitor = lambda value: setattr(call, "monitor", value)
+        engine = SimpleNamespace(bus=SimpleNamespace(emit=lambda event, **data: None),
+                                 be=SimpleNamespace(stop_playback=lambda: None, stop_preview=lambda: None))
+        host = HostBridge(engine, pj, "a" * 64)
+        host.call = call
+        host.client = SimpleNamespace(buffers=AudioBuffers(), session_id=str(uuid.uuid4()), close=lambda: None)
+        host._attach(media)
+        self.assertNotIn(media.id, capture.listeners)
+        self.assertNotIn(speaker.id, media.listeners)
+        self.assertIn(host.port.id, media.listeners)
+        self.assertIn(media.id, host.port.listeners)
+
 
 if __name__ == "__main__":
     unittest.main()
