@@ -106,7 +106,7 @@
   <header>
     <div class="wrap">
       <h1>Anveo Phone VoiceBot QuickStart</h1>
-      <p class="subtitle">Fast Windows test guide for proving live bidirectional telephone audio. Phase 0 sends a test tone or WAV, Phase 1 adds a caller-turn response loop, and Phase 3 adds a local appointment test flow.</p>
+      <p class="subtitle">Fast Windows test guide for proving live bidirectional telephone audio. Phase 0 sends a test tone or WAV, Phase 1 adds a caller-turn response loop, Phase 3 adds a local appointment flow, and the Voice-Engine test connects an HTTP persona backend.</p>
     </div>
   </header>
 
@@ -143,7 +143,7 @@
       <p>If needed, specify Python:</p>
       <pre><code>launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>This opens the PCM server and launches AnveoPhone with the Phase 0 bridge armed for one incoming call.</p>
-      <p>You can also run the menu launcher with <code>launch_app.bat</code>; choose <strong>A</strong> for Phase 0, <strong>H</strong> for Phase 1, or <strong>I</strong> for the Phase 3 appointment test.</p>
+      <p>You can also run the menu launcher with <code>launch_app.bat</code>; choose <strong>A</strong> for Phase 0, <strong>H</strong> for Phase 1, <strong>I</strong> for Phase 3, or <strong>J</strong> for the Voice-Engine API test.</p>
     </section>
 
     <section>
@@ -170,19 +170,34 @@ launch_phase1.bat</code></pre>
     </section>
 
     <section>
-      <h2>6. Make The Test Call</h2>
+      <h2>6. Optional Voice-Engine API Test</h2>
+      <p>Set either the local Voice-Engine folder/config or an HTTP engine URL before launching. Voice-Engine owns speech recognition and response generation. If the engine returns text only, the bridge speaks it with local TTS.</p>
+      <pre><code>set VOICEBOT_ENGINE_DIR=F:\Voice-Engine
+set VOICEBOT_ENGINE_CONFIG=F:\Voice-Engine\config.json
+set VOICEBOT_ENGINE_PERSONA=front-desk
+launch_voice_engine.bat</code></pre>
+      <p>HTTP mode is also supported:</p>
+      <pre><code>set VOICEBOT_ENGINE_URL=http://127.0.0.1:9000/turn
+set VOICEBOT_ENGINE_API_KEY=your-key-if-needed
+set VOICEBOT_ENGINE_PERSONA=front-desk
+launch_voice_engine.bat</code></pre>
+      <p>The menu launcher exposes this as option <strong>J</strong>. Reports use <code>mode: voice_engine</code>.</p>
+    </section>
+
+    <section>
+      <h2>7. Make The Test Call</h2>
       <ol>
         <li>Call your Anveo number from a test phone.</li>
         <li>Answer manually in AnveoPhone.</li>
         <li>Confirm the Events panel says <code>Live PCM connected</code>.</li>
-        <li>For Phase 0, the caller should hear a one-second 440 Hz tone. For Phase 1 or Phase 3, speak and pause, then listen for the response.</li>
+        <li>For Phase 0, the caller should hear a one-second 440 Hz tone. For Phase 1, Phase 3, or Voice-Engine mode, speak and pause, then listen for the response.</li>
         <li>Speak a clear phrase for at least five seconds.</li>
         <li>Hang up.</li>
       </ol>
     </section>
 
     <section>
-      <h2>7. Check Output</h2>
+      <h2>8. Check Output</h2>
       <table>
         <tr>
           <th>File</th>

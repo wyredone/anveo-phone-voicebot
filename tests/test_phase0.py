@@ -13,9 +13,10 @@ import wave
 from pathlib import Path
 from types import SimpleNamespace
 
+from voicebot.engine_api import VoiceEngineResult, pcm_to_wav_bytes
 from voicebot.host import HostBridge
 from voicebot.phase1 import (AppointmentDialog, Phase1Responder, TurnDetector, _SAPI_RECOGNITION_SCRIPT,
-                             prepare_stt_pcm, wav_to_bridge_pcm)
+                             prepare_stt_pcm, wav_bytes_to_bridge_pcm, wav_to_bridge_pcm)
 from voicebot.pcm import AudioBuffers, FORMAT, FRAME_BYTES, RATE, tone, wav_pcm
 from voicebot.pjsip_port import create_port, require_capabilities
 from voicebot.protocol import audio_message, audio_payload, encode, open_message, read, token_file
@@ -345,6 +346,53 @@ class Phase1Tests(unittest.TestCase):
         self.assertEqual(response.metadata["intent"], "appointment")
         self.assertEqual(response.metadata["caller_name"], "Sam")
         self.assertEqual(response.metadata["requested_time"], "appointment tomorrow morning")
+
+    def test_voice_engine_response_uses_engine_audio_and_persona(self):
+        class FakeEngine:
+            def respond(self, caller_pcm, session_id, turn_index):
+                self.caller_pcm = caller_pcm
+                self.session_id = session_id
+                self.turn_index = turn_index
+                return VoiceEngineResult(
+                    transcript="hello from engine",
+                    response_text="engine persona response",
+                    response_audio_wav=pcm_to_wav_bytes(tone(0.02, 770)),
+                    raw={"transcript": "hello from engine", "response_text": "engine persona response"},
+                )
+
+        responder = Phase1Responder(response_mode="engine", voice_engine_persona="front-desk")
+        responder.voice_engine = FakeEngine()
+        responder.start_session("session-one")
+        response = responder.respond(tone(0.4, 660))
+        self.assertEqual(response.transcript, "hello from engine")
+        self.assertEqual(response.transcript_source, "voice_engine")
+        self.assertEqual(response.text, "engine persona response")
+        self.assertEqual(response.source, "voice_engine_audio")
+        self.assertEqual(response.metadata["persona"], "front-desk")
+        self.assertEqual(responder.voice_engine.session_id, "session-one")
+        self.assertEqual(responder.voice_engine.turn_index, 1)
+        self.assertEqual(response.pcm, wav_bytes_to_bridge_pcm(pcm_to_wav_bytes(tone(0.02, 770))))
+
+    def test_voice_engine_text_response_can_use_local_tts(self):
+        class FakeEngine:
+            def respond(self, caller_pcm, session_id, turn_index):
+                return VoiceEngineResult(
+                    transcript="caller needs help",
+                    response_text="local tts should speak this",
+                    response_audio_wav=b"",
+                    raw={"text": "local tts should speak this"},
+                )
+
+        class EngineResponder(Phase1Responder):
+            def _synthesize(self, backend, text):
+                self.last_text = text
+                return tone(0.02, 880)
+
+        responder = EngineResponder(response_mode="engine", tts_backend="sapi")
+        responder.voice_engine = FakeEngine()
+        response = responder.respond(tone(0.4, 660))
+        self.assertEqual(response.source, "voice_engine_text_sapi")
+        self.assertEqual(response.text, responder.last_text)
 
     def test_bad_response_mode_rejected(self):
         with self.assertRaises(ValueError):

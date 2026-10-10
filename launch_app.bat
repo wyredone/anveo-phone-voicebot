@@ -42,9 +42,10 @@ echo (F) Open QuickStart/User Guide
 echo (G) Settings
 echo (H) Run Phase 1 response test
 echo (I) Run Phase 3 appointment test
+echo (J) Run Voice-Engine API test
 echo (Q) Quit
 echo.
-choice /c ABCDEFGHIQ /n /m "Choose: "
+choice /c ABCDEFGHIJQ /n /m "Choose: "
 set "MENU_CHOICE=%ERRORLEVEL%"
 if "%MENU_CHOICE%"=="1" goto live_test
 if "%MENU_CHOICE%"=="2" goto logged_tests
@@ -55,7 +56,8 @@ if "%MENU_CHOICE%"=="6" goto docs
 if "%MENU_CHOICE%"=="7" goto settings
 if "%MENU_CHOICE%"=="8" goto phase1_test
 if "%MENU_CHOICE%"=="9" goto phase3_test
-if "%MENU_CHOICE%"=="10" goto end
+if "%MENU_CHOICE%"=="10" goto engine_test
+if "%MENU_CHOICE%"=="11" goto end
 goto menu
 
 :require_anveophone
@@ -227,6 +229,45 @@ if not "%VOICEBOT_PIPER_MODEL%"=="" (
 ) else (
     start "VoiceBot Phase 3 Appointment PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode appointment --tts-backend auto --stt-backend auto %VOICEBOT_SAPI_ARGS%"
 )
+echo.
+echo Starting AnveoPhone host. Answer one incoming test call manually.
+echo F8 arms another call. F9 restores manual audio.
+echo.
+"%VOICEBOT_PYTHON%" -m voicebot host --anveophone "%ANVEOPHONE_DIR%" --arm-next-call --port %VOICEBOT_PORT%
+echo.
+pause
+goto menu
+
+:engine_test
+call :require_anveophone
+if errorlevel 1 goto menu
+if "%VOICEBOT_ENGINE_URL%"=="" if "%VOICEBOT_ENGINE_DIR%"=="" (
+    echo.
+    echo Set VOICEBOT_ENGINE_DIR for local Voice-Engine or VOICEBOT_ENGINE_URL for HTTP mode.
+    echo Optional: set VOICEBOT_ENGINE_CONFIG, VOICEBOT_ENGINE_API_KEY, and VOICEBOT_ENGINE_PERSONA.
+    echo.
+    pause
+    goto menu
+)
+echo.
+echo Close the normal AnveoPhone app before continuing.
+echo Disable AnveoPhone Auto-answer before this test.
+echo Voice-Engine dir: %VOICEBOT_ENGINE_DIR%
+echo Voice-Engine config: %VOICEBOT_ENGINE_CONFIG%
+echo Voice-Engine URL: %VOICEBOT_ENGINE_URL%
+echo Voice-Engine persona: %VOICEBOT_ENGINE_PERSONA%
+echo.
+pause
+call :doctor
+if errorlevel 1 (
+    echo.
+    echo Diagnostic failed. See artifacts\doctor.json.
+    pause
+    goto menu
+)
+echo.
+echo Starting Voice-Engine API server bridge window on port %VOICEBOT_PORT%...
+start "VoiceBot Voice-Engine API PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode engine --tts-backend auto --stt-backend off --voice-engine-url "%VOICEBOT_ENGINE_URL%" --voice-engine-dir "%VOICEBOT_ENGINE_DIR%" --voice-engine-config "%VOICEBOT_ENGINE_CONFIG%" --voice-engine-persona "%VOICEBOT_ENGINE_PERSONA%""
 echo.
 echo Starting AnveoPhone host. Answer one incoming test call manually.
 echo F8 arms another call. F9 restores manual audio.

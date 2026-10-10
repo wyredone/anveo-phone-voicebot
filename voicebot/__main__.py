@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -21,8 +22,8 @@ def main(argv=None):
     ai_server.add_argument("--output", default="artifacts/calls")
     ai_server.add_argument("--no-capture", action="store_true", help="Only save PCM statistics")
     ai_server.add_argument("--response-text", default="Hello. Phase one is connected. I heard you through the phone bridge.")
-    ai_server.add_argument("--response-mode", choices=("fixed", "echo", "rules", "appointment"), default="rules",
-                           help="fixed speaks --response-text; echo repeats caller text; rules uses simple replies; appointment runs the Phase 3 test flow")
+    ai_server.add_argument("--response-mode", choices=("fixed", "echo", "rules", "appointment", "engine"), default="rules",
+                           help="fixed speaks --response-text; echo repeats caller text; rules uses simple replies; appointment runs Phase 3; engine calls local or HTTP Voice-Engine")
     ai_server.add_argument("--piper-model", help="Optional Piper .onnx voice model for spoken response")
     ai_server.add_argument("--piper-config", help="Optional Piper model JSON config")
     ai_server.add_argument("--piper-exe", default="piper", help="Piper executable name or full path")
@@ -37,6 +38,19 @@ def main(argv=None):
                            help="Caller speech recognition backend. auto uses Windows SAPI when available.")
     ai_server.add_argument("--stt-timeout", type=float, default=8.0,
                            help="Seconds to wait for local speech recognition")
+    ai_server.add_argument("--voice-engine-url", default=os.environ.get("VOICEBOT_ENGINE_URL", ""),
+                           help="HTTP endpoint for Voice-Engine turn processing. Defaults to VOICEBOT_ENGINE_URL.")
+    ai_server.add_argument("--voice-engine-api-key", default=os.environ.get("VOICEBOT_ENGINE_API_KEY", ""),
+                           help="Bearer token for Voice-Engine. Defaults to VOICEBOT_ENGINE_API_KEY.")
+    ai_server.add_argument("--voice-engine-persona", default=os.environ.get("VOICEBOT_ENGINE_PERSONA", ""),
+                           help="Persona name or ID to send to Voice-Engine. Defaults to VOICEBOT_ENGINE_PERSONA.")
+    ai_server.add_argument("--voice-engine-timeout", type=float,
+                           default=float(os.environ.get("VOICEBOT_ENGINE_TIMEOUT", "20")),
+                           help="Seconds to wait for Voice-Engine HTTP response")
+    ai_server.add_argument("--voice-engine-dir", default=os.environ.get("VOICEBOT_ENGINE_DIR", ""),
+                           help="Local Voice-Engine repo/package folder. Defaults to VOICEBOT_ENGINE_DIR.")
+    ai_server.add_argument("--voice-engine-config", default=os.environ.get("VOICEBOT_ENGINE_CONFIG", ""),
+                           help="Local Voice-Engine config file. Defaults to VOICEBOT_ENGINE_CONFIG.")
     host = commands.add_parser("host", help="Launch AnveoPhone with optional live media adapter")
     host.add_argument("--anveophone", required=True)
     host.add_argument("--arm-next-call", action="store_true")
@@ -63,7 +77,10 @@ def main(argv=None):
             responder = Phase1Responder(args.response_text, args.piper_model, args.piper_config, args.piper_exe,
                                         args.tts_backend, args.sapi_voice, args.sapi_rate, args.sapi_volume,
                                         args.tts_timeout, args.stt_backend, args.stt_timeout,
-                                        args.response_mode)
+                                        args.response_mode, args.voice_engine_url,
+                                        args.voice_engine_api_key, args.voice_engine_persona,
+                                        args.voice_engine_timeout, args.voice_engine_dir,
+                                        args.voice_engine_config)
             if args.response_mode == "fixed":
                 responder.prepare()
             bridge = BridgeServer(token, args.port, args.output, capture=not args.no_capture, responder=responder)

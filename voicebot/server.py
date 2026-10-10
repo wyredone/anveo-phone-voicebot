@@ -80,7 +80,8 @@ class BridgeServer:
         wav = wave.open(str(capture_path), "wb") if self.capture else None
         if wav:
             wav.setparams((1, 2, RATE, 0, "NONE", "not compressed"))
-        mode = "phase3" if getattr(self.responder, "response_mode", "") == "appointment" else ("phase1" if self.responder else "phase0")
+        response_mode = getattr(self.responder, "response_mode", "")
+        mode = "voice_engine" if response_mode == "engine" else ("phase3" if response_mode == "appointment" else ("phase1" if self.responder else "phase0"))
         report = {"session_id": session_id, "format": FORMAT, "rx_frames": 0, "tx_frames": 0,
                   "nonzero_samples": 0, "peak": 0, "sum_squares": 0,
                   "capture_path": str(capture_path) if wav else None, "reason": "disconnect",
@@ -138,7 +139,7 @@ class BridgeServer:
                                                  "response_source": response_source,
                                                  "metadata": generated.metadata})
                             deadline = time.monotonic()
-                            event_name = "phase3_response_ready" if report["mode"] == "phase3" else "phase1_response_ready"
+                            event_name = "voice_engine_response_ready" if report["mode"] == "voice_engine" else ("phase3_response_ready" if report["mode"] == "phase3" else "phase1_response_ready")
                             print(json.dumps({"event": event_name, "session_id": session_id,
                                               "source": response_source, "text": response_text,
                                               "transcript": transcript, "transcript_source": transcript_source,

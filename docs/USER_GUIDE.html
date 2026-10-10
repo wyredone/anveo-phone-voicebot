@@ -126,7 +126,7 @@
     <section class="card notice">
       <h2>Phase 0 Scope</h2>
       <p>Phase 0 proves telephone audio only. It captures incoming caller PCM and sends back a test tone or a supplied WAV. It does not answer calls automatically, run AI, transcribe speech, select personas, or perform production receptionist logic.</p>
-      <p>Phase 1 is available as an opt-in response loop. It detects caller speech, waits for a pause, and sends generated return audio. Phase 3 adds a local multi-turn dental appointment test flow using the same bridge.</p>
+      <p>Phase 1 is available as an opt-in response loop. It detects caller speech, waits for a pause, and sends generated return audio. Phase 3 adds a local multi-turn dental appointment test flow. Voice-Engine mode sends caller turns to the local Voice-Engine package or an HTTP persona backend for STT and AI.</p>
     </section>
 
     <ul class="toc">
@@ -136,6 +136,7 @@
       <li><a href="#live-call">Live Call Test</a></li>
       <li><a href="#phase1">Phase 1 Response Test</a></li>
       <li><a href="#phase3">Phase 3 Appointment Test</a></li>
+      <li><a href="#voice-engine">Voice-Engine API Test</a></li>
       <li><a href="#artifacts">Artifacts</a></li>
       <li><a href="#troubleshooting">Troubleshooting</a></li>
     </ul>
@@ -164,7 +165,7 @@
       <p>If needed, specify the exact Python executable:</p>
       <pre><code>launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>The launcher runs diagnostics, starts the PCM server in a second window, and opens AnveoPhone with the bridge armed for one incoming answered call.</p>
-      <p>The menu launcher <code>launch_app.bat</code> also exposes the Phase 1 response test as option <strong>H</strong> and the Phase 3 appointment test as option <strong>I</strong>.</p>
+      <p>The menu launcher <code>launch_app.bat</code> also exposes the Phase 1 response test as option <strong>H</strong>, the Phase 3 appointment test as option <strong>I</strong>, and the Voice-Engine API test as option <strong>J</strong>.</p>
     </section>
 
     <section id="logged-tests">
@@ -240,6 +241,22 @@ launch_phase1.bat</code></pre>
       <p>The call report records <code>mode: phase3</code>, <code>phase_interactions</code>, and <code>appointment_summary</code> with the detected intent, caller name, requested time, notes, and dialogue stage.</p>
     </section>
 
+    <section id="voice-engine">
+      <h2>Voice-Engine API Test</h2>
+      <p>This mode sends each caller turn to Voice-Engine so the selected config/persona can handle speech recognition and response generation.</p>
+      <pre><code>set VOICEBOT_ENGINE_DIR=F:\Voice-Engine
+set VOICEBOT_ENGINE_CONFIG=F:\Voice-Engine\config.json
+set VOICEBOT_ENGINE_PERSONA=front-desk
+launch_voice_engine.bat</code></pre>
+      <p>HTTP mode is also available:</p>
+      <pre><code>set VOICEBOT_ENGINE_URL=http://127.0.0.1:9000/turn
+set VOICEBOT_ENGINE_API_KEY=your-key-if-needed
+set VOICEBOT_ENGINE_PERSONA=front-desk
+launch_voice_engine.bat</code></pre>
+      <p>With the menu launcher, choose <strong>J</strong>. The API key is read from the environment and is not saved into local launcher config.</p>
+      <p>In local mode, caller PCM goes through <code>engine.stt.transcribe(...)</code> and <code>engine.brain.generate(...)</code>. In HTTP mode, the request sends <code>session_id</code>, <code>turn_index</code>, <code>persona</code>, and base64 WAV audio; the response can include <code>transcript</code>, <code>response_text</code>, and optional <code>response_audio_wav_base64</code>. Reports use <code>mode: voice_engine</code>.</p>
+    </section>
+
     <section id="artifacts">
       <h2>Artifacts And Logs</h2>
       <table>
@@ -312,7 +329,7 @@ launch_phase1.bat</code></pre>
       <h2>What Phase 0 Does Not Prove</h2>
       <ul>
         <li>It does not prove a human caller heard audio unless you verify it during a real test call.</li>
-        <li>It does not run Voice-Engine AI, STT, TTS, personas, or scheduling rules.</li>
+        <li>Voice-Engine AI, STT, TTS, and personas are available only in the separate Voice-Engine API test mode.</li>
         <li>It does not answer calls automatically.</li>
         <li>It does not make production decisions about which callers should be handled by the bot.</li>
       </ul>

@@ -38,3 +38,44 @@ ownership. A new F8 arm is required for another call after release/failure.
 Later STT adapters should convert s16le to normalized float PCM explicitly, and
 use independent persona/history/cancellation state per UUID. TTS should synthesize
 into session-specific audio and feed this transport without PC speaker playback.
+
+## Voice-Engine turn contract
+
+Voice-Engine mode can call the local `wyres_voice_engine` package directly via
+`VOICEBOT_ENGINE_DIR` and `VOICEBOT_ENGINE_CONFIG`. In local mode the bridge sends
+caller PCM to `engine.stt.transcribe(...)`, sends the transcript to
+`engine.brain.generate(...)`, then speaks the returned text through the bridge TTS.
+
+HTTP mode posts each detected caller turn to `VOICEBOT_ENGINE_URL`. The request
+uses JSON and includes a 16 kHz mono 16-bit WAV wrapped in base64:
+
+```json
+{
+  "session_id": "call-session-uuid",
+  "turn_index": 1,
+  "persona": "front-desk",
+  "audio": {
+    "encoding": "wav_pcm_s16le",
+    "sample_rate": 16000,
+    "channels": 1,
+    "data_base64": "..."
+  }
+}
+```
+
+If `VOICEBOT_ENGINE_API_KEY` is set, the bridge sends it as
+`Authorization: Bearer ...`. The key is never printed in logs.
+
+Expected response:
+
+```json
+{
+  "transcript": "caller words",
+  "response_text": "persona response",
+  "response_audio_wav_base64": "optional 16-bit WAV audio"
+}
+```
+
+When `response_audio_wav_base64` is present, the bridge plays that audio. When the
+engine returns text only, local TTS speaks `response_text`. Reports use
+`mode: voice_engine` and record each turn in `phase_interactions`.

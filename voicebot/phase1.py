@@ -9,8 +9,10 @@ import struct
 import tempfile
 import wave
 from dataclasses import dataclass, field
+from io import BytesIO
 from pathlib import Path
 
+from .engine_api import LocalVoiceEngineClient, VoiceEngineClient
 from .pcm import FRAME_BYTES, RATE, tone
 
 
@@ -97,14 +99,13 @@ class TurnDetector:
         self.started = False
 
 
-def wav_to_bridge_pcm(path: str | Path) -> bytes:
-    with wave.open(str(path), "rb") as wav:
-        channels = wav.getnchannels()
-        width = wav.getsampwidth()
-        rate = wav.getframerate()
-        if width != 2:
-            raise ValueError("Piper WAV must be 16-bit PCM")
-        data = wav.readframes(wav.getnframes())
+def _wav_to_bridge_pcm(wav) -> bytes:
+    channels = wav.getnchannels()
+    width = wav.getsampwidth()
+    rate = wav.getframerate()
+    if width != 2:
+        raise ValueError("WAV must be 16-bit PCM")
+    data = wav.readframes(wav.getnframes())
     if channels > 1:
         unpacked = struct.unpack("<" + "h" * (len(data) // 2), data)
         mono = []
@@ -126,6 +127,16 @@ def wav_to_bridge_pcm(path: str | Path) -> bytes:
             converted.append(int(samples[lo] * (1 - frac) + samples[hi] * frac))
         data = struct.pack("<" + "h" * len(converted), *converted)
     return data
+
+
+def wav_to_bridge_pcm(path: str | Path) -> bytes:
+    with wave.open(str(path), "rb") as wav:
+        return _wav_to_bridge_pcm(wav)
+
+
+def wav_bytes_to_bridge_pcm(data: bytes) -> bytes:
+    with wave.open(BytesIO(data), "rb") as wav:
+        return _wav_to_bridge_pcm(wav)
 
 
 def fallback_response_pcm() -> bytes:
@@ -294,13 +305,16 @@ class Phase1Responder:
                  tts_backend: str = "auto", sapi_voice: str | None = None,
                  sapi_rate: int = 0, sapi_volume: int = 100, tts_timeout: float = 8.0,
                  stt_backend: str = "auto", stt_timeout: float = 8.0,
-                 response_mode: str = "fixed"):
+                 response_mode: str = "fixed", voice_engine_url: str = "",
+                 voice_engine_api_key: str = "", voice_engine_persona: str = "",
+                 voice_engine_timeout: float = 20.0, voice_engine_dir: str = "",
+                 voice_engine_config: str = ""):
         if tts_backend not in {"auto", "piper", "sapi", "tone"}:
             raise ValueError("tts_backend must be one of: auto, piper, sapi, tone")
         if stt_backend not in {"auto", "sapi", "off"}:
             raise ValueError("stt_backend must be one of: auto, sapi, off")
-        if response_mode not in {"fixed", "echo", "rules", "appointment"}:
-            raise ValueError("response_mode must be one of: fixed, echo, rules, appointment")
+        if response_mode not in {"fixed", "echo", "rules", "appointment", "engine"}:
+            raise ValueError("response_mode must be one of: fixed, echo, rules, appointment, engine")
         self.response_text = response_text or "Hello. Phase one is connected. I heard you through the phone bridge."
         self.piper_model = piper_model
         self.piper_config = piper_config
@@ -315,8 +329,21 @@ class Phase1Responder:
         self.response_mode = response_mode
         self._prepared: PreparedAudio | None = None
         self.appointment_dialog = AppointmentDialog()
+        self.session_id = ""
+        self.turn_index = 0
+        if voice_engine_dir or voice_engine_config:
+            self.voice_engine = LocalVoiceEngineClient(voice_engine_dir, voice_engine_config,
+                                                       voice_engine_persona)
+        elif voice_engine_url:
+            self.voice_engine = VoiceEngineClient(voice_engine_url, voice_engine_api_key,
+                                                  voice_engine_persona, voice_engine_timeout)
+        else:
+            self.voice_engine = None
+        self.voice_engine_persona = voice_engine_persona
 
     def start_session(self, session_id: str):
+        self.session_id = session_id
+        self.turn_index = 0
         self.appointment_dialog.reset()
 
     def prepare(self) -> PreparedAudio:
@@ -335,6 +362,8 @@ class Phase1Responder:
         return self._prepared
 
     def respond(self, caller_pcm: bytes) -> VoiceResponse:
+        if self.response_mode == "engine":
+            return self._voice_engine_response(caller_pcm)
         stats = _pcm_stats(caller_pcm)
         signal_summary = f"caller audio detected, {len(caller_pcm) / (RATE * 2):.2f} seconds, rms {stats['rms']}"
         transcript = self.transcribe(caller_pcm)
@@ -365,6 +394,52 @@ class Phase1Responder:
                              transcript_source=transcript.source,
                              transcript_errors=transcript.errors,
                              metadata=metadata if self.response_mode == "appointment" else {})
+
+    def _voice_engine_response(self, caller_pcm: bytes) -> VoiceResponse:
+        self.turn_index += 1
+        errors = []
+        metadata: dict[str, object] = {"persona": self.voice_engine_persona,
+                                       "turn_index": self.turn_index}
+        if self.voice_engine:
+            try:
+                result = self.voice_engine.respond(caller_pcm, self.session_id, self.turn_index)
+                response_text = result.response_text or "I heard you. The voice engine returned no response text."
+                if result.response_audio_wav:
+                    prepared = PreparedAudio(wav_bytes_to_bridge_pcm(result.response_audio_wav),
+                                             "voice_engine_audio", [])
+                else:
+                    prepared = self._build_response_audio(response_text)
+                    prepared = PreparedAudio(prepared.pcm, f"voice_engine_text_{prepared.source}", prepared.errors)
+                engine_backend = str(result.raw.get("backend") or "voice_engine_http")
+                metadata.update({"engine": engine_backend,
+                                 "raw_keys": sorted(str(key) for key in result.raw.keys())})
+                print(json.dumps({"event": "voice_engine_response_prepared",
+                                  "source": prepared.source,
+                                  "frames": frame_count(prepared.pcm),
+                                  "seconds": round(len(prepared.pcm) / (RATE * 2), 3),
+                                  "text": response_text,
+                                  "transcript": result.transcript,
+                                  "persona": self.voice_engine_persona}), flush=True)
+                return VoiceResponse(pcm=prepared.pcm, text=response_text,
+                                     source=prepared.source,
+                                     transcript=result.transcript,
+                                     transcript_source="voice_engine" if result.transcript else "voice_engine_none",
+                                     transcript_errors=prepared.errors,
+                                     metadata=metadata)
+            except Exception as exc:
+                errors.append({"backend": "voice_engine", "error": str(exc)})
+                print(json.dumps({"event": "voice_engine_fallback", "errors": errors,
+                                  "persona": self.voice_engine_persona}), flush=True)
+        else:
+            errors.append({"backend": "voice_engine", "error": "VOICEBOT_ENGINE_URL is not configured"})
+        response_text = "The voice engine is not available yet. I am falling back to the local appointment test."
+        prepared = self._build_response_audio(response_text)
+        metadata.update({"engine": "voice_engine_http", "fallback": True})
+        return VoiceResponse(pcm=prepared.pcm, text=response_text,
+                             source=f"voice_engine_fallback_{prepared.source}",
+                             transcript="", transcript_source="voice_engine_error",
+                             transcript_errors=errors + prepared.errors,
+                             metadata=metadata)
 
     def _echo_response_text(self, transcript: str) -> str:
         clean = " ".join(transcript.split())
