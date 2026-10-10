@@ -108,9 +108,10 @@ Phase 2 starts caller speech recognition. With `--stt-backend auto`, Windows use
 SAPI dictation recognition on the caller turn. Reports include
 `phase1_transcript_source`; `sapi` means recognized words were logged, while `none`
 means recognition returned nothing or failed and `phase1_transcript_errors` has
-details. The launcher now runs `--response-mode echo`, so the spoken response
-acknowledges the recognized caller text. Use `--response-mode fixed` to keep the
-known static phrase.
+details. The launcher now runs `--response-mode rules`, so the spoken response uses
+simple receptionist-style rules for greetings, scheduling, messages and hours. Use
+`--response-mode echo` to repeat recognized caller text, or `--response-mode fixed`
+to keep the known static phrase.
 
 ## Validation
 

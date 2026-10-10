@@ -281,6 +281,33 @@ class Phase1Tests(unittest.TestCase):
         self.assertIn("I heard you say: hello from the caller.", response.text)
         self.assertEqual(response.text, responder.last_text)
 
+    def test_rules_response_routes_known_intents(self):
+        class RuleResponder(Phase1Responder):
+            def __init__(self, transcript):
+                super().__init__("Fixed text.", tts_backend="sapi", stt_backend="sapi",
+                                 response_mode="rules")
+                self.rule_transcript = transcript
+
+            def _recognize(self, backend, caller_pcm):
+                return self.rule_transcript
+
+            def _synthesize(self, backend, text):
+                self.last_text = text
+                return tone(0.02, 880)
+
+        cases = [
+            ("hello this is kevin", "Please say your name"),
+            ("I need an appointment", "asking about scheduling"),
+            ("please call me back", "take a message"),
+            ("what are your hours", "question about hours"),
+            ("aloe 1234", "Please say your name"),
+        ]
+        for phrase, expected in cases:
+            responder = RuleResponder(phrase)
+            response = responder.respond(tone(0.4, 660))
+            self.assertIn(expected, response.text)
+            self.assertEqual(response.text, responder.last_text)
+
     def test_bad_response_mode_rejected(self):
         with self.assertRaises(ValueError):
             Phase1Responder(response_mode="ramble")

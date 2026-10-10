@@ -175,12 +175,12 @@ if not "%VOICEBOT_SAPI_VOICE%"=="" (
 )
 if not "%VOICEBOT_PIPER_MODEL%"=="" (
     if not "%VOICEBOT_PIPER_CONFIG%"=="" (
-        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode echo --tts-backend auto --stt-backend auto --piper-model "%VOICEBOT_PIPER_MODEL%" --piper-config "%VOICEBOT_PIPER_CONFIG%" %VOICEBOT_SAPI_ARGS%"
+        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode rules --tts-backend auto --stt-backend auto --piper-model "%VOICEBOT_PIPER_MODEL%" --piper-config "%VOICEBOT_PIPER_CONFIG%" %VOICEBOT_SAPI_ARGS%"
     ) else (
-        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode echo --tts-backend auto --stt-backend auto --piper-model "%VOICEBOT_PIPER_MODEL%" %VOICEBOT_SAPI_ARGS%"
+        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode rules --tts-backend auto --stt-backend auto --piper-model "%VOICEBOT_PIPER_MODEL%" %VOICEBOT_SAPI_ARGS%"
     )
 ) else (
-    start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode echo --tts-backend auto --stt-backend auto %VOICEBOT_SAPI_ARGS%"
+    start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode rules --tts-backend auto --stt-backend auto %VOICEBOT_SAPI_ARGS%"
 )
 echo.
 echo Starting AnveoPhone host. Answer one incoming test call manually.

@@ -21,8 +21,8 @@ def main(argv=None):
     ai_server.add_argument("--output", default="artifacts/calls")
     ai_server.add_argument("--no-capture", action="store_true", help="Only save PCM statistics")
     ai_server.add_argument("--response-text", default="Hello. Phase one is connected. I heard you through the phone bridge.")
-    ai_server.add_argument("--response-mode", choices=("fixed", "echo"), default="echo",
-                           help="fixed speaks --response-text; echo speaks back the recognized caller text")
+    ai_server.add_argument("--response-mode", choices=("fixed", "echo", "rules"), default="rules",
+                           help="fixed speaks --response-text; echo repeats caller text; rules uses simple receptionist replies")
     ai_server.add_argument("--piper-model", help="Optional Piper .onnx voice model for spoken response")
     ai_server.add_argument("--piper-config", help="Optional Piper model JSON config")
     ai_server.add_argument("--piper-exe", default="piper", help="Piper executable name or full path")

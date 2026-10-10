@@ -167,8 +167,8 @@ class Phase1Responder:
             raise ValueError("tts_backend must be one of: auto, piper, sapi, tone")
         if stt_backend not in {"auto", "sapi", "off"}:
             raise ValueError("stt_backend must be one of: auto, sapi, off")
-        if response_mode not in {"fixed", "echo"}:
-            raise ValueError("response_mode must be one of: fixed, echo")
+        if response_mode not in {"fixed", "echo", "rules"}:
+            raise ValueError("response_mode must be one of: fixed, echo, rules")
         self.response_text = response_text or "Hello. Phase one is connected. I heard you through the phone bridge."
         self.piper_model = piper_model
         self.piper_config = piper_config
@@ -207,7 +207,9 @@ class Phase1Responder:
             response_text = self.response_text
             prepared = self.prepare()
         else:
-            response_text = self._echo_response_text(transcript.text)
+            response_text = (self._rules_response_text(transcript.text)
+                             if self.response_mode == "rules"
+                             else self._echo_response_text(transcript.text))
             prepared = self._build_response_audio(response_text)
             print(json.dumps({"event": "phase2_dynamic_response_prepared",
                               "source": prepared.source,
@@ -226,6 +228,22 @@ class Phase1Responder:
         if len(clean) > 160:
             clean = clean[:157].rstrip() + "..."
         return f"I heard you say: {clean}. Phase two speech recognition is connected."
+
+    def _rules_response_text(self, transcript: str) -> str:
+        clean = " ".join(transcript.lower().split())
+        if not clean:
+            return "I heard audio, but I could not recognize the words yet. Please say your name and the reason for your call."
+        if any(word in clean for word in ("hello", "hi", "hey", "aloe")):
+            return "Hello. This is the Anveo voice bot test line. Please say your name and how I can help."
+        if any(word in clean for word in ("appointment", "schedule", "booking", "book")):
+            return "I heard that you are asking about scheduling. Please leave your name, phone number, and the appointment details."
+        if any(word in clean for word in ("message", "voicemail", "call me", "callback", "call back")):
+            return "I can take a message. Please say your name, phone number, and the message after the tone in a future phase."
+        if any(word in clean for word in ("hours", "open", "close", "closed")):
+            return "I heard a question about hours. Business-hours lookup is not connected yet, but the intent was detected."
+        if len(clean) > 140:
+            clean = clean[:137].rstrip() + "..."
+        return f"I heard you say: {clean}. I do not have a business rule for that yet, but recognition is working."
 
     def transcribe(self, caller_pcm: bytes) -> Transcript:
         errors = []
