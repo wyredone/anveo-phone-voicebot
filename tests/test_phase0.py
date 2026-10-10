@@ -216,7 +216,7 @@ class NetworkTests(unittest.TestCase):
         until(client.connected.is_set)
         collected = bytearray()
         for index in range(130):
-            buffers.receive(tone(0.02, 660) if index < 20 else bytes(FRAME_BYTES))
+            buffers.receive(tone(0.02, 660) if index < 30 else bytes(FRAME_BYTES))
             collected.extend(buffers.request(FRAME_BYTES))
             time.sleep(0.02)
         client.close()
@@ -231,6 +231,12 @@ class NetworkTests(unittest.TestCase):
 
 
 class Phase1Tests(unittest.TestCase):
+    def test_default_turn_detector_ignores_low_level_noise(self):
+        detector = TurnDetector(silence_seconds=0.06)
+        quiet = struct.pack("<" + "h" * (FRAME_BYTES // 2), *([40] * (FRAME_BYTES // 2)))
+        for _ in range(60):
+            self.assertIsNone(detector.feed(quiet))
+
     def test_sapi_recognition_script_avoids_powershell_input_collision(self):
         self.assertIn("$WavPath", _SAPI_RECOGNITION_SCRIPT)
         self.assertIn("SetInputToWaveFile($WavPath)", _SAPI_RECOGNITION_SCRIPT)

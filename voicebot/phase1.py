@@ -27,7 +27,7 @@ def _pcm_stats(pcm: bytes) -> dict[str, float | int]:
 
 class TurnDetector:
     def __init__(self, silence_seconds: float = 1.0, max_turn_seconds: float = 5.0,
-                 min_speech_seconds: float = 0.25, rms_threshold: int = 12, peak_threshold: int = 120):
+                 min_speech_seconds: float = 0.5, rms_threshold: int = 100, peak_threshold: int = 1000):
         self.silence_frames = max(1, int(silence_seconds / 0.02))
         self.max_frames = max(1, int(max_turn_seconds / 0.02))
         self.min_speech_frames = max(1, int(min_speech_seconds / 0.02))
