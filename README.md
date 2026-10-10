@@ -12,6 +12,11 @@ HTML guides:
 1. [QuickStart](docs/QUICKSTART.html)
 2. [User Guide](docs/USER_GUIDE.html)
 
+Menu launcher:
+
+1. `launch_app.bat`
+2. Optional first run with paths: `launch_app.bat "F:\anveophone" "C:\path\to\python.exe"`
+
 1. Download/extract this repository. Keep the complete folder together.
 2. Close any running AnveoPhone instance. Use its working Python interpreter;
    the native `_pjsua2.pyd` must match that interpreter and its DLL dependencies.
