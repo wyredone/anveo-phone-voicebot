@@ -5,6 +5,7 @@ if "%~1"=="" (
     echo Usage: launch_phase1.bat "F:\anveophone" ["C:\path\to\python.exe"]
     echo Optional Piper model: set VOICEBOT_PIPER_MODEL=C:\path\voice.onnx
     echo Optional Piper config: set VOICEBOT_PIPER_CONFIG=C:\path\voice.onnx.json
+    echo Optional Windows voice: set VOICEBOT_SAPI_VOICE=Microsoft Zira Desktop
     pause
     exit /b 1
 )
@@ -23,14 +24,20 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-if defined VOICEBOT_PIPER_MODEL (
-    if defined VOICEBOT_PIPER_CONFIG (
-        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --piper-model "%VOICEBOT_PIPER_MODEL%" --piper-config "%VOICEBOT_PIPER_CONFIG%""
+set "VOICEBOT_TTS_BACKEND=auto"
+if not "%VOICEBOT_SAPI_VOICE%"=="" (
+    set "VOICEBOT_SAPI_ARGS=--sapi-voice "%VOICEBOT_SAPI_VOICE%""
+) else (
+    set "VOICEBOT_SAPI_ARGS="
+)
+if not "%VOICEBOT_PIPER_MODEL%"=="" (
+    if not "%VOICEBOT_PIPER_CONFIG%"=="" (
+        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --tts-backend %VOICEBOT_TTS_BACKEND% --piper-model "%VOICEBOT_PIPER_MODEL%" --piper-config "%VOICEBOT_PIPER_CONFIG%" %VOICEBOT_SAPI_ARGS%"
     ) else (
-        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --piper-model "%VOICEBOT_PIPER_MODEL%""
+        start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --tts-backend %VOICEBOT_TTS_BACKEND% --piper-model "%VOICEBOT_PIPER_MODEL%" %VOICEBOT_SAPI_ARGS%"
     )
 ) else (
-    start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai"
+    start "VoiceBot Phase 1 AI PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --tts-backend %VOICEBOT_TTS_BACKEND% %VOICEBOT_SAPI_ARGS%"
 )
 echo Answer one incoming test call manually. Speak, pause, and listen for the Phase 1 response.
 "%VOICEBOT_PYTHON%" -m voicebot host --anveophone "%~1" --arm-next-call

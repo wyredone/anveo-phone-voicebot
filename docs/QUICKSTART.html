@@ -148,11 +148,14 @@
 
     <section>
       <h2>4. Optional Phase 1 Response Test</h2>
-      <p>Phase 1 waits for caller audio, detects a pause, and returns generated audio through the same live PCM bridge. Without Piper installed, the response is a fallback tone pattern.</p>
+      <p>Phase 1 waits for caller audio, detects a pause, and returns generated audio through the same live PCM bridge. On Windows it uses built-in SAPI speech by default, with a fallback tone pattern if TTS fails.</p>
       <pre><code>launch_phase1.bat "F:\anveophone"</code></pre>
       <p>Optional spoken response with Piper:</p>
       <pre><code>set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
 set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
+launch_phase1.bat "F:\anveophone"</code></pre>
+      <p>Optional Windows voice selection:</p>
+      <pre><code>set VOICEBOT_SAPI_VOICE=Microsoft Zira Desktop
 launch_phase1.bat "F:\anveophone"</code></pre>
     </section>
 

@@ -24,6 +24,11 @@ def main(argv=None):
     ai_server.add_argument("--piper-model", help="Optional Piper .onnx voice model for spoken response")
     ai_server.add_argument("--piper-config", help="Optional Piper model JSON config")
     ai_server.add_argument("--piper-exe", default="piper", help="Piper executable name or full path")
+    ai_server.add_argument("--tts-backend", choices=("auto", "piper", "sapi", "tone"), default="auto",
+                           help="Response voice backend. auto uses Piper when configured, then Windows SAPI.")
+    ai_server.add_argument("--sapi-voice", help="Optional Windows SAPI voice name")
+    ai_server.add_argument("--sapi-rate", type=int, default=0, help="Windows SAPI rate, -10 to 10")
+    ai_server.add_argument("--sapi-volume", type=int, default=100, help="Windows SAPI volume, 0 to 100")
     host = commands.add_parser("host", help="Launch AnveoPhone with optional live media adapter")
     host.add_argument("--anveophone", required=True)
     host.add_argument("--arm-next-call", action="store_true")
@@ -47,7 +52,8 @@ def main(argv=None):
         from .server import BridgeServer
         if args.command == "serve-ai":
             from .phase1 import Phase1Responder
-            responder = Phase1Responder(args.response_text, args.piper_model, args.piper_config, args.piper_exe)
+            responder = Phase1Responder(args.response_text, args.piper_model, args.piper_config, args.piper_exe,
+                                        args.tts_backend, args.sapi_voice, args.sapi_rate, args.sapi_volume)
             bridge = BridgeServer(token, args.port, args.output, capture=not args.no_capture, responder=responder)
             test_audio = "phase1 generated response"
         else:

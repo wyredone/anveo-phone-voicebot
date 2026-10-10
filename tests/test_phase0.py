@@ -4,6 +4,7 @@ import json
 import queue
 import socket
 import struct
+import sys
 import tempfile
 import time
 import unittest
@@ -229,6 +230,24 @@ class NetworkTests(unittest.TestCase):
 
 
 class Phase1Tests(unittest.TestCase):
+    def test_auto_backend_order_prefers_configured_local_tts(self):
+        responder = Phase1Responder("Test response.", tts_backend="auto")
+        expected = ["sapi"] if sys.platform == "win32" else []
+        self.assertEqual(responder._backend_order(), expected)
+        responder = Phase1Responder("Test response.", piper_model="voice.onnx", tts_backend="auto")
+        expected = ["piper", "sapi"] if sys.platform == "win32" else ["piper"]
+        self.assertEqual(responder._backend_order(), expected)
+
+    def test_tone_backend_forces_fallback_pattern(self):
+        responder = Phase1Responder("Test response.", tts_backend="tone")
+        response = responder.respond(tone(0.4, 660))
+        self.assertEqual(response.source, "fallback_tone")
+        self.assertEqual(response.pcm, responder.respond(tone(0.4, 660)).pcm)
+
+    def test_bad_tts_backend_rejected(self):
+        with self.assertRaises(ValueError):
+            Phase1Responder(tts_backend="wat")
+
     def test_turn_detector_waits_for_speech_then_silence(self):
         detector = TurnDetector(silence_seconds=0.06, min_speech_seconds=0.04)
         self.assertIsNone(detector.feed(bytes(FRAME_BYTES)))

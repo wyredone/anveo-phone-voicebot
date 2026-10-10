@@ -126,7 +126,7 @@
     <section class="card notice">
       <h2>Phase 0 Scope</h2>
       <p>Phase 0 proves telephone audio only. It captures incoming caller PCM and sends back a test tone or a supplied WAV. It does not answer calls automatically, run AI, transcribe speech, select personas, or perform production receptionist logic.</p>
-      <p>Phase 1 is available as an opt-in response loop. It detects caller speech, waits for a pause, and sends generated return audio. It can use Piper for local TTS, but does not yet perform real STT or persona/brain logic.</p>
+      <p>Phase 1 is available as an opt-in response loop. It detects caller speech, waits for a pause, and sends generated return audio. It can use built-in Windows SAPI speech or Piper for local TTS, but does not yet perform real STT or persona/brain logic.</p>
     </section>
 
     <ul class="toc">
@@ -216,9 +216,12 @@
       <h2>Phase 1 Response Test</h2>
       <p>Phase 1 uses the proven PCM bridge, waits for a caller turn, then sends generated response audio back into the call. Use it after Phase 0 shows <code>bidirectional_pcm_observed: true</code>.</p>
       <pre><code>launch_phase1.bat "F:\anveophone"</code></pre>
-      <p>With the menu launcher, choose <strong>H</strong>. After answering the incoming call, speak briefly and pause for about one second. The caller should hear a response. Without Piper, this response is a tone pattern. With Piper, it is spoken text.</p>
+      <p>With the menu launcher, choose <strong>H</strong>. After answering the incoming call, speak briefly and pause for about one second. The caller should hear a response. On Windows, the default response uses SAPI speech. With Piper configured, Piper is used first. If local TTS fails, the response is a tone pattern.</p>
       <pre><code>set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
 set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
+launch_phase1.bat "F:\anveophone"</code></pre>
+      <p>Optional Windows voice selection:</p>
+      <pre><code>set VOICEBOT_SAPI_VOICE=Microsoft Zira Desktop
 launch_phase1.bat "F:\anveophone"</code></pre>
       <p>Advanced server-only command:</p>
       <pre><code>python -m voicebot serve-ai --response-text "Hello. Phase one is connected."</code></pre>

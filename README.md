@@ -7,7 +7,7 @@ incoming caller PCM.
 
 Phase 1 has started as an opt-in response loop: after the caller speaks and pauses,
 the receiver generates return audio and sends it through the same live PCM bridge.
-It can use Piper for a spoken response when configured, otherwise it sends a
+It can use Piper when configured, Windows SAPI speech by default on Windows, or a
 distinct fallback tone pattern. It does not yet perform real STT or persona logic.
 
 ## Windows quick start
@@ -69,14 +69,22 @@ Run from the menu with **H**, or directly:
 1. `launch_phase1.bat "F:\anveophone"`
 2. Answer one incoming test call manually.
 3. Speak for at least a moment, then pause for about one second.
-4. Listen for the generated response. Without Piper, it is a tone pattern. With
-   Piper configured, it is spoken text.
+4. Listen for the generated response. On Windows it should use SAPI speech by
+   default. With Piper configured, Piper is used first. If TTS fails, it falls
+   back to the tone pattern.
 
 Optional Piper setup before launching:
 
 ```bat
 set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
 set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
+launch_phase1.bat "F:\anveophone"
+```
+
+Optional Windows SAPI voice selection:
+
+```bat
+set VOICEBOT_SAPI_VOICE=Microsoft Zira Desktop
 launch_phase1.bat "F:\anveophone"
 ```
 
@@ -88,7 +96,8 @@ python -m voicebot serve-ai --response-text "Hello. Phase one is connected."
 
 Per-call JSON reports include `mode: phase1`, a placeholder transcript summary,
 the response text, and the response source (`piper`, `fallback_tone`, or
-`fallback_tone_after_tts_error`).
+`fallback_tone_after_tts_error`). On Windows, a successful built-in spoken response
+reports `phase1_response_source: sapi`.
 
 ## Validation
 
