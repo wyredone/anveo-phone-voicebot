@@ -25,6 +25,36 @@ def _pcm_stats(pcm: bytes) -> dict[str, float | int]:
     return {"peak": peak, "rms": rms}
 
 
+def _pcm_samples(pcm: bytes) -> tuple[int, ...]:
+    return struct.unpack("<" + "h" * (len(pcm) // 2), pcm[:len(pcm) - len(pcm) % 2])
+
+
+def prepare_stt_pcm(pcm: bytes, rms_threshold: int = 80, peak_threshold: int = 800,
+                    pad_frames: int = 10, target_peak: int = 14000) -> bytes:
+    frames = [pcm[i:i + FRAME_BYTES] for i in range(0, len(pcm), FRAME_BYTES)
+              if len(pcm[i:i + FRAME_BYTES]) == FRAME_BYTES]
+    voiced = []
+    for index, frame in enumerate(frames):
+        stats = _pcm_stats(frame)
+        if stats["rms"] >= rms_threshold or stats["peak"] >= peak_threshold:
+            voiced.append(index)
+    if voiced:
+        start = max(0, voiced[0] - pad_frames)
+        end = min(len(frames), voiced[-1] + pad_frames + 1)
+        pcm = b"".join(frames[start:end])
+    samples = _pcm_samples(pcm)
+    if not samples:
+        return b""
+    peak = max(abs(sample) for sample in samples)
+    if peak <= 0:
+        return pcm
+    scale = min(8.0, target_peak / peak)
+    if scale <= 1.05:
+        return pcm
+    normalized = [max(-32768, min(32767, int(sample * scale))) for sample in samples]
+    return struct.pack("<" + "h" * len(normalized), *normalized)
+
+
 class TurnDetector:
     def __init__(self, silence_seconds: float = 1.0, max_turn_seconds: float = 5.0,
                  min_speech_seconds: float = 0.5, rms_threshold: int = 100, peak_threshold: int = 1000):
@@ -309,12 +339,13 @@ class Phase1Responder:
         if sys.platform != "win32":
             return None
         exe = shutil.which("powershell.exe") or shutil.which("powershell") or "powershell.exe"
+        stt_pcm = prepare_stt_pcm(caller_pcm)
         with tempfile.TemporaryDirectory() as folder:
             wav_path = Path(folder) / "caller-turn.wav"
             script = Path(folder) / "sapi-recognize.ps1"
             with wave.open(str(wav_path), "wb") as wav:
                 wav.setparams((1, 2, RATE, 0, "NONE", "not compressed"))
-                wav.writeframes(caller_pcm)
+                wav.writeframes(stt_pcm)
             script.write_text(_SAPI_RECOGNITION_SCRIPT, encoding="utf-8")
             command = [
                 exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
@@ -327,7 +358,15 @@ class Phase1Responder:
             data = json.loads(proc.stdout or "{}")
             if data.get("error"):
                 raise RuntimeError(str(data["error"]))
-            return str(data.get("text") or "").strip() or None
+            text = str(data.get("text") or "").strip()
+            if not text:
+                stats = _pcm_stats(stt_pcm)
+                print(json.dumps({"event": "stt_no_match", "source": "sapi",
+                                  "confidence": data.get("confidence", 0.0),
+                                  "seconds": round(len(stt_pcm) / (RATE * 2), 3),
+                                  "rms": stats["rms"], "peak": stats["peak"]}), flush=True)
+                return None
+            return text
 
 
 def frame_count(pcm: bytes) -> int:

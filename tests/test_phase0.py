@@ -14,7 +14,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from voicebot.host import HostBridge
-from voicebot.phase1 import Phase1Responder, TurnDetector, _SAPI_RECOGNITION_SCRIPT, wav_to_bridge_pcm
+from voicebot.phase1 import (Phase1Responder, TurnDetector, _SAPI_RECOGNITION_SCRIPT,
+                             prepare_stt_pcm, wav_to_bridge_pcm)
 from voicebot.pcm import AudioBuffers, FORMAT, FRAME_BYTES, RATE, tone, wav_pcm
 from voicebot.pjsip_port import create_port, require_capabilities
 from voicebot.protocol import audio_message, audio_payload, encode, open_message, read, token_file
@@ -28,6 +29,11 @@ def until(predicate, timeout=3):
         if time.monotonic() > deadline:
             raise AssertionError("Timed out")
         time.sleep(0.005)
+
+
+def _peak(pcm):
+    samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
+    return max(abs(sample) for sample in samples) if samples else 0
 
 
 class PCMTests(unittest.TestCase):
@@ -231,6 +237,13 @@ class NetworkTests(unittest.TestCase):
 
 
 class Phase1Tests(unittest.TestCase):
+    def test_prepare_stt_pcm_trims_and_normalizes_turn(self):
+        quiet = struct.pack("<" + "h" * (FRAME_BYTES // 2), *([20] * (FRAME_BYTES // 2)))
+        speech = struct.pack("<" + "h" * (FRAME_BYTES // 2), *([1200] * (FRAME_BYTES // 2)))
+        prepared = prepare_stt_pcm(quiet * 40 + speech * 30 + quiet * 40, pad_frames=2)
+        self.assertLess(len(prepared), len(quiet * 110))
+        self.assertGreater(_peak(prepared), 5000)
+
     def test_default_turn_detector_ignores_low_level_noise(self):
         detector = TurnDetector(silence_seconds=0.06)
         quiet = struct.pack("<" + "h" * (FRAME_BYTES // 2), *([40] * (FRAME_BYTES // 2)))
