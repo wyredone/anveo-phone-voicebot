@@ -105,8 +105,8 @@
 <body>
   <header>
     <div class="wrap">
-      <h1>Anveo Phone VoiceBot Phase 0 QuickStart</h1>
-      <p class="subtitle">Fast Windows test guide for proving live bidirectional telephone audio. Phase 0 sends a test tone or WAV and captures caller PCM. It does not run AI, STT, personas, or TTS yet.</p>
+      <h1>Anveo Phone VoiceBot QuickStart</h1>
+      <p class="subtitle">Fast Windows test guide for proving live bidirectional telephone audio. Phase 0 sends a test tone or WAV and captures caller PCM. Phase 1 adds an opt-in caller-turn response loop.</p>
     </div>
   </header>
 
@@ -143,22 +143,33 @@
       <p>If needed, specify Python:</p>
       <pre><code>launch_phase0.bat "F:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>This opens the PCM server and launches AnveoPhone with the Phase 0 bridge armed for one incoming call.</p>
+      <p>You can also run the menu launcher with <code>launch_app.bat</code>; choose <strong>A</strong> for Phase 0 or <strong>H</strong> for the Phase 1 response test.</p>
     </section>
 
     <section>
-      <h2>4. Make The Test Call</h2>
+      <h2>4. Optional Phase 1 Response Test</h2>
+      <p>Phase 1 waits for caller audio, detects a pause, and returns generated audio through the same live PCM bridge. Without Piper installed, the response is a fallback tone pattern.</p>
+      <pre><code>launch_phase1.bat "F:\anveophone"</code></pre>
+      <p>Optional spoken response with Piper:</p>
+      <pre><code>set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
+set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
+launch_phase1.bat "F:\anveophone"</code></pre>
+    </section>
+
+    <section>
+      <h2>5. Make The Test Call</h2>
       <ol>
         <li>Call your Anveo number from a test phone.</li>
         <li>Answer manually in AnveoPhone.</li>
         <li>Confirm the Events panel says <code>Live PCM connected</code>.</li>
-        <li>The caller should hear a one-second 440 Hz tone.</li>
+        <li>For Phase 0, the caller should hear a one-second 440 Hz tone. For Phase 1, speak and pause, then listen for the response.</li>
         <li>Speak a clear phrase for at least five seconds.</li>
         <li>Hang up.</li>
       </ol>
     </section>
 
     <section>
-      <h2>5. Check Output</h2>
+      <h2>6. Check Output</h2>
       <table>
         <tr>
           <th>File</th>
@@ -173,7 +184,7 @@
         <tr>
           <td>Call JSON report</td>
           <td><code>artifacts\calls\*.json</code></td>
-          <td>Frame counts, signal stats, and bidirectional PCM flag.</td>
+          <td>Frame counts, signal stats, bidirectional PCM flag, and Phase 1 response details when used.</td>
         </tr>
         <tr>
           <td>Test bundle ZIP</td>
@@ -189,6 +200,7 @@
         <label><input type="checkbox"> Incoming call rings normally and is answered manually.</label>
         <label><input type="checkbox"> Events shows <code>Live PCM connected</code>.</label>
         <label><input type="checkbox"> Caller hears the test tone or test WAV.</label>
+        <label><input type="checkbox"> For Phase 1, caller speech plus a pause triggers response audio.</label>
         <label><input type="checkbox"> Captured WAV contains the caller phrase.</label>
         <label><input type="checkbox"> JSON report shows nonzero caller audio and response frames.</label>
         <label><input type="checkbox"> F9 restores normal manual audio if pressed during a call.</label>

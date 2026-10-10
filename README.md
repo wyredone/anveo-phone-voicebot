@@ -1,9 +1,14 @@
-# Anveo Phone VoiceBot — Phase 0
+# Anveo Phone VoiceBot
 
 Standalone, audio-only proof of concept for connecting AnveoPhone's live call media
 to a separate localhost process. Voice-Engine personas, STT, AI and TTS are planned
 for later phases. This milestone sends a test tone or supplied WAV and captures
 incoming caller PCM.
+
+Phase 1 has started as an opt-in response loop: after the caller speaks and pauses,
+the receiver generates return audio and sends it through the same live PCM bridge.
+It can use Piper for a spoken response when configured, otherwise it sends a
+distinct fallback tone pattern. It does not yet perform real STT or persona logic.
 
 ## Windows quick start
 
@@ -16,6 +21,8 @@ Menu launcher:
 
 1. `launch_app.bat`
 2. Optional first run with paths: `launch_app.bat "F:\anveophone" "C:\path\to\python.exe"`
+3. Choose **A** for the proven Phase 0 tone/capture test, or **H** for the Phase 1
+   caller-turn response test.
 
 1. Download/extract this repository. Keep the complete folder together.
 2. Close any running AnveoPhone instance. Use its working Python interpreter;
@@ -54,6 +61,34 @@ It is a static response, not AI conversation.
 
 Test captures contain caller audio. Use a test call and a tester aware of capture.
 Use `serve --no-capture` to keep only signal statistics instead of WAV files.
+
+## Phase 1 response loop
+
+Run from the menu with **H**, or directly:
+
+1. `launch_phase1.bat "F:\anveophone"`
+2. Answer one incoming test call manually.
+3. Speak for at least a moment, then pause for about one second.
+4. Listen for the generated response. Without Piper, it is a tone pattern. With
+   Piper configured, it is spoken text.
+
+Optional Piper setup before launching:
+
+```bat
+set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
+set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json
+launch_phase1.bat "F:\anveophone"
+```
+
+The matching advanced server command is:
+
+```bat
+python -m voicebot serve-ai --response-text "Hello. Phase one is connected."
+```
+
+Per-call JSON reports include `mode: phase1`, a placeholder transcript summary,
+the response text, and the response source (`piper`, `fallback_tone`, or
+`fallback_tone_after_tts_error`).
 
 ## Validation
 

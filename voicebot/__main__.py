@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="AnveoPhone VoiceBot — audio-only Phase 0")
+    parser = argparse.ArgumentParser(description="AnveoPhone VoiceBot — localhost PCM bridge")
     commands = parser.add_subparsers(dest="command", required=True)
     doctor = commands.add_parser("doctor", help="Check Windows interpreter and PJSUA2 binding")
     doctor.add_argument("--anveophone", required=True)
@@ -17,10 +17,17 @@ def main(argv=None):
     server.add_argument("--wav", help="Optional 16 kHz mono 16-bit PCM response, <=30 seconds")
     server.add_argument("--output", default="artifacts/calls")
     server.add_argument("--no-capture", action="store_true", help="Only save PCM statistics")
+    ai_server = commands.add_parser("serve-ai", help="Phase 1: detect a caller turn and return generated/TTS audio")
+    ai_server.add_argument("--output", default="artifacts/calls")
+    ai_server.add_argument("--no-capture", action="store_true", help="Only save PCM statistics")
+    ai_server.add_argument("--response-text", default="Hello. Phase one is connected. I heard you through the phone bridge.")
+    ai_server.add_argument("--piper-model", help="Optional Piper .onnx voice model for spoken response")
+    ai_server.add_argument("--piper-config", help="Optional Piper model JSON config")
+    ai_server.add_argument("--piper-exe", default="piper", help="Piper executable name or full path")
     host = commands.add_parser("host", help="Launch AnveoPhone with optional live media adapter")
     host.add_argument("--anveophone", required=True)
     host.add_argument("--arm-next-call", action="store_true")
-    for command in (server, host):
+    for command in (server, ai_server, host):
         command.add_argument("--port", type=int, default=8765)
         command.add_argument("--token-file", default=str(Path(__file__).resolve().parents[1] / ".local" / "bridge.token"))
     args = parser.parse_args(argv)
@@ -38,10 +45,17 @@ def main(argv=None):
             return launch(args.anveophone, token, args.port, args.arm_next_call)
         from .pcm import wav_pcm
         from .server import BridgeServer
-        bridge = BridgeServer(token, args.port, args.output,
-                              wav_pcm(args.wav) if args.wav else None, not args.no_capture)
+        if args.command == "serve-ai":
+            from .phase1 import Phase1Responder
+            responder = Phase1Responder(args.response_text, args.piper_model, args.piper_config, args.piper_exe)
+            bridge = BridgeServer(token, args.port, args.output, capture=not args.no_capture, responder=responder)
+            test_audio = "phase1 generated response"
+        else:
+            bridge = BridgeServer(token, args.port, args.output,
+                                  wav_pcm(args.wav) if args.wav else None, not args.no_capture)
+            test_audio = args.wav or "440 Hz tone"
         print(json.dumps({"event": "listening", "host": "127.0.0.1", "port": bridge.port,
-                          "test_audio": args.wav or "440 Hz tone", "capture": not args.no_capture}), flush=True)
+                          "test_audio": test_audio, "capture": not args.no_capture}), flush=True)
         try:
             bridge.serve()
         except KeyboardInterrupt:

@@ -13,6 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from voicebot.host import HostBridge
+from voicebot.phase1 import Phase1Responder, TurnDetector, wav_to_bridge_pcm
 from voicebot.pcm import AudioBuffers, FORMAT, FRAME_BYTES, RATE, tone, wav_pcm
 from voicebot.pjsip_port import create_port, require_capabilities
 from voicebot.protocol import audio_message, audio_payload, encode, open_message, read, token_file
@@ -200,6 +201,58 @@ class NetworkTests(unittest.TestCase):
             sock.sendall(encode(hello))
             with self.assertRaises(EOFError):
                 read(sock)
+
+    def test_phase1_generates_response_after_caller_turn(self):
+        self.server.close()
+        self.temp.cleanup()
+        self.temp = tempfile.TemporaryDirectory()
+        self.server = BridgeServer("a" * 64, port=0, output_dir=self.temp.name,
+                                   responder=Phase1Responder("Phase one test response."))
+        self.server.start()
+        buffers = AudioBuffers(prefill_frames=1)
+        client = BridgeClient(buffers, "a" * 64, self.server.port)
+        client.start()
+        until(client.connected.is_set)
+        collected = bytearray()
+        for index in range(130):
+            buffers.receive(tone(0.02, 660) if index < 20 else bytes(FRAME_BYTES))
+            collected.extend(buffers.request(FRAME_BYTES))
+            time.sleep(0.02)
+        client.close()
+        report = client.report
+        self.assertEqual(client.error, "")
+        self.assertEqual(report["mode"], "phase1")
+        self.assertTrue(report["bidirectional_pcm_observed"])
+        self.assertIn("caller audio detected", report["phase1_transcript"])
+        self.assertEqual(report["phase1_response_source"], "fallback_tone")
+        self.assertGreater(sum(byte != 0 for byte in collected), 1000)
+
+
+class Phase1Tests(unittest.TestCase):
+    def test_turn_detector_waits_for_speech_then_silence(self):
+        detector = TurnDetector(silence_seconds=0.06, min_speech_seconds=0.04)
+        self.assertIsNone(detector.feed(bytes(FRAME_BYTES)))
+        self.assertIsNone(detector.feed(tone(0.02, 660)))
+        self.assertIsNone(detector.feed(tone(0.02, 660)))
+        self.assertIsNone(detector.feed(bytes(FRAME_BYTES)))
+        self.assertIsNone(detector.feed(bytes(FRAME_BYTES)))
+        turn = detector.feed(bytes(FRAME_BYTES))
+        self.assertIsNotNone(turn)
+        self.assertGreaterEqual(len(turn), FRAME_BYTES * 5)
+
+    def test_wav_to_bridge_pcm_converts_stereo_8k(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "stereo.wav"
+            samples = []
+            for i in range(800):
+                value = int(1000 * (i % 2))
+                samples.extend([value, value])
+            with wave.open(str(path), "wb") as wav:
+                wav.setparams((2, 2, 8000, 0, "NONE", "none"))
+                wav.writeframes(struct.pack("<" + "h" * len(samples), *samples))
+            pcm = wav_to_bridge_pcm(path)
+        self.assertGreater(len(pcm), 3000)
+        self.assertEqual(len(pcm) % 2, 0)
 
 
 class FakeVector(list):
