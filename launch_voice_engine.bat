@@ -3,6 +3,9 @@ setlocal DisableDelayedExpansion
 cd /d "%~dp0"
 set "ANVEOPHONE_DIR=%~1"
 if not defined ANVEOPHONE_DIR set "ANVEOPHONE_DIR=E:\anveophone"
+if not defined VOICEBOT_ENGINE_DIR set "VOICEBOT_ENGINE_DIR=E:\Voice-Engine-main"
+if not defined VOICEBOT_ENGINE_CONFIG set "VOICEBOT_ENGINE_CONFIG=%VOICEBOT_ENGINE_DIR%\config.json"
+if not defined VOICEBOT_ENGINE_TIMEOUT set "VOICEBOT_ENGINE_TIMEOUT=20"
 set "VOICEBOT_PYTHON=%~2"
 if not defined VOICEBOT_PYTHON (
     if exist "C:\msys64\ucrt64\bin\python3.exe" (
@@ -24,7 +27,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-start "VoiceBot Voice-Engine API PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --response-mode engine --tts-backend auto --stt-backend off --voice-engine-url "%VOICEBOT_ENGINE_URL%" --voice-engine-dir "%VOICEBOT_ENGINE_DIR%" --voice-engine-config "%VOICEBOT_ENGINE_CONFIG%" --voice-engine-persona "%VOICEBOT_ENGINE_PERSONA%""
+start "VoiceBot Voice-Engine API PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --response-mode engine --tts-backend auto --stt-backend off --voice-engine-url "%VOICEBOT_ENGINE_URL%" --voice-engine-dir "%VOICEBOT_ENGINE_DIR%" --voice-engine-config "%VOICEBOT_ENGINE_CONFIG%" --voice-engine-persona "%VOICEBOT_ENGINE_PERSONA%" --voice-engine-timeout %VOICEBOT_ENGINE_TIMEOUT%"
 echo Answer one incoming test call manually. Voice-Engine owns STT and persona/AI; response audio uses engine audio when available or local TTS.
 "%VOICEBOT_PYTHON%" -m voicebot host --anveophone "%ANVEOPHONE_DIR%" --arm-next-call
 set "VOICEBOT_EXIT=%ERRORLEVEL%"

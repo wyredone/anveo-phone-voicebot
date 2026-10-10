@@ -331,12 +331,12 @@ class Phase1Responder:
         self.appointment_dialog = AppointmentDialog()
         self.session_id = ""
         self.turn_index = 0
-        if voice_engine_dir or voice_engine_config:
-            self.voice_engine = LocalVoiceEngineClient(voice_engine_dir, voice_engine_config,
-                                                       voice_engine_persona)
-        elif voice_engine_url:
+        if voice_engine_url:
             self.voice_engine = VoiceEngineClient(voice_engine_url, voice_engine_api_key,
                                                   voice_engine_persona, voice_engine_timeout)
+        elif voice_engine_dir or voice_engine_config:
+            self.voice_engine = LocalVoiceEngineClient(voice_engine_dir, voice_engine_config,
+                                                       voice_engine_persona)
         else:
             self.voice_engine = None
         self.voice_engine_persona = voice_engine_persona

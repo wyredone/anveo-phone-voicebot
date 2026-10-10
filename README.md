@@ -24,7 +24,7 @@ Menu launcher:
 2. Optional first run with paths: `launch_app.bat "F:\anveophone" "C:\path\to\python.exe"`
 3. Choose **A** for the proven Phase 0 tone/capture test, **H** for the Phase 1
    caller-turn response test, **I** for the Phase 3 appointment test, or **J** for
-   the Voice-Engine API test.
+   the Voice-Engine test.
 
 1. Download/extract this repository. Keep the complete folder together.
 2. Close any running AnveoPhone instance. Use its working Python interpreter;
@@ -128,17 +128,24 @@ The report includes `mode: phase3`, `phase_interactions`, and an
 `appointment_summary` with the detected intent, caller name when captured, requested
 time when captured, notes, and current dialogue stage.
 
-## Voice-Engine API test
+## Voice-Engine test
 
 This path sends the caller turn to Voice-Engine so the selected persona/config can
 own STT and AI response generation. It can use the local `wyres_voice_engine`
 package directly, or an HTTP endpoint if you wrap Voice-Engine as a service.
 
-Local package mode:
+Local package mode defaults to `E:\Voice-Engine-main` and
+`E:\Voice-Engine-main\config.json`, so the normal menu path is:
 
 ```bat
-set VOICEBOT_ENGINE_DIR=F:\Voice-Engine
-set VOICEBOT_ENGINE_CONFIG=F:\Voice-Engine\config.json
+launch_app.bat
+```
+
+Choose **J**. To override from the command line:
+
+```bat
+set VOICEBOT_ENGINE_DIR=E:\Voice-Engine-main
+set VOICEBOT_ENGINE_CONFIG=E:\Voice-Engine-main\config.json
 set VOICEBOT_ENGINE_PERSONA=front-desk
 launch_voice_engine.bat
 ```
@@ -153,7 +160,9 @@ launch_voice_engine.bat
 ```
 
 The menu launcher exposes the same flow as **J**. API keys are read from the
-environment and are not written to `.local` config.
+environment and are not written to `.local` config. The launcher Settings screen
+can save the Voice-Engine folder, config path, persona, optional HTTP URL, timeout,
+SAPI voice, and Piper paths.
 
 Request contract sent to `VOICEBOT_ENGINE_URL`:
 

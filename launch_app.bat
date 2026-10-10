@@ -5,6 +5,7 @@ cd /d "%~dp0"
 set "APP_NAME=Anveo Phone VoiceBot"
 set "CONFIG_FILE=.local\phase0-launcher.env"
 set "DEFAULT_ANVEOPHONE_DIR=E:\anveophone"
+set "DEFAULT_VOICE_ENGINE_DIR=E:\Voice-Engine-main"
 set "DEFAULT_PORT=8765"
 set "VOICEBOT_PORT=%DEFAULT_PORT%"
 
@@ -22,6 +23,9 @@ if not defined VOICEBOT_PYTHON (
 
 if exist "C:\msys64\ucrt64\bin\python3.exe" set "PATH=C:\msys64\ucrt64\bin;%PATH%"
 if not defined ANVEOPHONE_DIR set "ANVEOPHONE_DIR=%DEFAULT_ANVEOPHONE_DIR%"
+if not defined VOICEBOT_ENGINE_DIR set "VOICEBOT_ENGINE_DIR=%DEFAULT_VOICE_ENGINE_DIR%"
+if not defined VOICEBOT_ENGINE_CONFIG set "VOICEBOT_ENGINE_CONFIG=%VOICEBOT_ENGINE_DIR%\config.json"
+if not defined VOICEBOT_ENGINE_TIMEOUT set "VOICEBOT_ENGINE_TIMEOUT=20"
 if not defined VOICEBOT_PORT set "VOICEBOT_PORT=%DEFAULT_PORT%"
 
 :menu
@@ -32,6 +36,9 @@ echo Current settings:
 echo   AnveoPhone: %ANVEOPHONE_DIR%
 echo   Python:     %VOICEBOT_PYTHON%
 echo   Port:       %VOICEBOT_PORT%
+echo   VoiceEngine:%VOICEBOT_ENGINE_DIR%
+echo   VE Config:  %VOICEBOT_ENGINE_CONFIG%
+echo   VE Persona: %VOICEBOT_ENGINE_PERSONA%
 echo.
 echo (A) Run live Phase 0 call test
 echo (B) Run logged test bundle
@@ -81,6 +88,14 @@ if not exist ".local" mkdir ".local"
     echo set "ANVEOPHONE_DIR=%ANVEOPHONE_DIR%"
     echo set "VOICEBOT_PYTHON=%VOICEBOT_PYTHON%"
     echo set "VOICEBOT_PORT=%VOICEBOT_PORT%"
+    echo set "VOICEBOT_ENGINE_DIR=%VOICEBOT_ENGINE_DIR%"
+    echo set "VOICEBOT_ENGINE_CONFIG=%VOICEBOT_ENGINE_CONFIG%"
+    echo set "VOICEBOT_ENGINE_PERSONA=%VOICEBOT_ENGINE_PERSONA%"
+    echo set "VOICEBOT_ENGINE_URL=%VOICEBOT_ENGINE_URL%"
+    echo set "VOICEBOT_ENGINE_TIMEOUT=%VOICEBOT_ENGINE_TIMEOUT%"
+    echo set "VOICEBOT_SAPI_VOICE=%VOICEBOT_SAPI_VOICE%"
+    echo set "VOICEBOT_PIPER_MODEL=%VOICEBOT_PIPER_MODEL%"
+    echo set "VOICEBOT_PIPER_CONFIG=%VOICEBOT_PIPER_CONFIG%"
 ) > "%CONFIG_FILE%"
 exit /b 0
 
@@ -256,6 +271,7 @@ echo Voice-Engine dir: %VOICEBOT_ENGINE_DIR%
 echo Voice-Engine config: %VOICEBOT_ENGINE_CONFIG%
 echo Voice-Engine URL: %VOICEBOT_ENGINE_URL%
 echo Voice-Engine persona: %VOICEBOT_ENGINE_PERSONA%
+echo Voice-Engine timeout: %VOICEBOT_ENGINE_TIMEOUT%
 echo.
 pause
 call :doctor
@@ -267,7 +283,7 @@ if errorlevel 1 (
 )
 echo.
 echo Starting Voice-Engine API server bridge window on port %VOICEBOT_PORT%...
-start "VoiceBot Voice-Engine API PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode engine --tts-backend auto --stt-backend off --voice-engine-url "%VOICEBOT_ENGINE_URL%" --voice-engine-dir "%VOICEBOT_ENGINE_DIR%" --voice-engine-config "%VOICEBOT_ENGINE_CONFIG%" --voice-engine-persona "%VOICEBOT_ENGINE_PERSONA%""
+start "VoiceBot Voice-Engine API PCM" cmd /k ""%VOICEBOT_PYTHON%" -m voicebot serve-ai --port %VOICEBOT_PORT% --response-mode engine --tts-backend auto --stt-backend off --voice-engine-url "%VOICEBOT_ENGINE_URL%" --voice-engine-dir "%VOICEBOT_ENGINE_DIR%" --voice-engine-config "%VOICEBOT_ENGINE_CONFIG%" --voice-engine-persona "%VOICEBOT_ENGINE_PERSONA%" --voice-engine-timeout %VOICEBOT_ENGINE_TIMEOUT%"
 echo.
 echo Starting AnveoPhone host. Answer one incoming test call manually.
 echo F8 arms another call. F9 restores manual audio.
@@ -297,6 +313,41 @@ echo.
 echo Current port: %VOICEBOT_PORT%
 set /p "NEW_PORT=New port, or press Enter to keep current: "
 if defined NEW_PORT set "VOICEBOT_PORT=%NEW_PORT%"
+echo.
+echo Current Voice-Engine folder: %VOICEBOT_ENGINE_DIR%
+set /p "NEW_ENGINE_DIR=New Voice-Engine folder, or press Enter to keep current: "
+if defined NEW_ENGINE_DIR (
+    set "VOICEBOT_ENGINE_DIR=%NEW_ENGINE_DIR%"
+    if not defined VOICEBOT_ENGINE_CONFIG set "VOICEBOT_ENGINE_CONFIG=%NEW_ENGINE_DIR%\config.json"
+)
+echo.
+echo Current Voice-Engine config: %VOICEBOT_ENGINE_CONFIG%
+set /p "NEW_ENGINE_CONFIG=New Voice-Engine config, or press Enter to keep current: "
+if defined NEW_ENGINE_CONFIG set "VOICEBOT_ENGINE_CONFIG=%NEW_ENGINE_CONFIG%"
+echo.
+echo Current Voice-Engine persona: %VOICEBOT_ENGINE_PERSONA%
+set /p "NEW_ENGINE_PERSONA=New persona name or ID, or press Enter to keep current: "
+if defined NEW_ENGINE_PERSONA set "VOICEBOT_ENGINE_PERSONA=%NEW_ENGINE_PERSONA%"
+echo.
+echo Current Voice-Engine HTTP URL: %VOICEBOT_ENGINE_URL%
+set /p "NEW_ENGINE_URL=New HTTP URL, or press Enter to keep current/blank: "
+if defined NEW_ENGINE_URL set "VOICEBOT_ENGINE_URL=%NEW_ENGINE_URL%"
+echo.
+echo Current Voice-Engine timeout: %VOICEBOT_ENGINE_TIMEOUT%
+set /p "NEW_ENGINE_TIMEOUT=New timeout seconds, or press Enter to keep current: "
+if defined NEW_ENGINE_TIMEOUT set "VOICEBOT_ENGINE_TIMEOUT=%NEW_ENGINE_TIMEOUT%"
+echo.
+echo Current Windows SAPI voice: %VOICEBOT_SAPI_VOICE%
+set /p "NEW_SAPI=New SAPI voice, or press Enter to keep current/auto: "
+if defined NEW_SAPI set "VOICEBOT_SAPI_VOICE=%NEW_SAPI%"
+echo.
+echo Current Piper model: %VOICEBOT_PIPER_MODEL%
+set /p "NEW_PIPER_MODEL=New Piper model path, or press Enter to keep current/blank: "
+if defined NEW_PIPER_MODEL set "VOICEBOT_PIPER_MODEL=%NEW_PIPER_MODEL%"
+echo.
+echo Current Piper config: %VOICEBOT_PIPER_CONFIG%
+set /p "NEW_PIPER_CONFIG=New Piper config path, or press Enter to keep current/blank: "
+if defined NEW_PIPER_CONFIG set "VOICEBOT_PIPER_CONFIG=%NEW_PIPER_CONFIG%"
 call :save_config
 echo.
 echo Settings saved to %CONFIG_FILE%.

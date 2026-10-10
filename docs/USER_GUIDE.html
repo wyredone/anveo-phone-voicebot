@@ -136,7 +136,7 @@
       <li><a href="#live-call">Live Call Test</a></li>
       <li><a href="#phase1">Phase 1 Response Test</a></li>
       <li><a href="#phase3">Phase 3 Appointment Test</a></li>
-      <li><a href="#voice-engine">Voice-Engine API Test</a></li>
+      <li><a href="#voice-engine">Voice-Engine Test</a></li>
       <li><a href="#artifacts">Artifacts</a></li>
       <li><a href="#troubleshooting">Troubleshooting</a></li>
     </ul>
@@ -165,7 +165,7 @@
       <p>If needed, specify the exact Python executable:</p>
       <pre><code>launch_phase0.bat "E:\anveophone" "C:\path\to\python.exe"</code></pre>
       <p>The launcher runs diagnostics, starts the PCM server in a second window, and opens AnveoPhone with the bridge armed for one incoming answered call.</p>
-      <p>The menu launcher <code>launch_app.bat</code> also exposes the Phase 1 response test as option <strong>H</strong>, the Phase 3 appointment test as option <strong>I</strong>, and the Voice-Engine API test as option <strong>J</strong>.</p>
+      <p>The menu launcher <code>launch_app.bat</code> also exposes the Phase 1 response test as option <strong>H</strong>, the Phase 3 appointment test as option <strong>I</strong>, and the Voice-Engine test as option <strong>J</strong>.</p>
     </section>
 
     <section id="logged-tests">
@@ -242,13 +242,13 @@ launch_phase1.bat</code></pre>
     </section>
 
     <section id="voice-engine">
-      <h2>Voice-Engine API Test</h2>
-      <p>This mode sends each caller turn to Voice-Engine so the selected config/persona can handle speech recognition and response generation.</p>
-      <pre><code>set VOICEBOT_ENGINE_DIR=F:\Voice-Engine
-set VOICEBOT_ENGINE_CONFIG=F:\Voice-Engine\config.json
+      <h2>Voice-Engine Test</h2>
+      <p>This mode sends each caller turn to Voice-Engine so the selected config/persona can handle speech recognition and response generation. The launcher defaults to <code>E:\Voice-Engine-main</code> and <code>E:\Voice-Engine-main\config.json</code>.</p>
+      <pre><code>set VOICEBOT_ENGINE_DIR=E:\Voice-Engine-main
+set VOICEBOT_ENGINE_CONFIG=E:\Voice-Engine-main\config.json
 set VOICEBOT_ENGINE_PERSONA=front-desk
 launch_voice_engine.bat</code></pre>
-      <p>HTTP mode is also available:</p>
+      <p>Use <strong>G</strong> Settings in <code>launch_app.bat</code> to save the Voice-Engine folder, config path, persona, optional HTTP URL, timeout, SAPI voice, and Piper paths. HTTP mode is also available:</p>
       <pre><code>set VOICEBOT_ENGINE_URL=http://127.0.0.1:9000/turn
 set VOICEBOT_ENGINE_API_KEY=your-key-if-needed
 set VOICEBOT_ENGINE_PERSONA=front-desk
