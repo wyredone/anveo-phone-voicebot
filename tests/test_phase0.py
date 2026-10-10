@@ -14,7 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from voicebot.host import HostBridge
-from voicebot.phase1 import Phase1Responder, TurnDetector, wav_to_bridge_pcm
+from voicebot.phase1 import Phase1Responder, TurnDetector, _SAPI_RECOGNITION_SCRIPT, wav_to_bridge_pcm
 from voicebot.pcm import AudioBuffers, FORMAT, FRAME_BYTES, RATE, tone, wav_pcm
 from voicebot.pjsip_port import create_port, require_capabilities
 from voicebot.protocol import audio_message, audio_payload, encode, open_message, read, token_file
@@ -231,6 +231,11 @@ class NetworkTests(unittest.TestCase):
 
 
 class Phase1Tests(unittest.TestCase):
+    def test_sapi_recognition_script_avoids_powershell_input_collision(self):
+        self.assertIn("$WavPath", _SAPI_RECOGNITION_SCRIPT)
+        self.assertIn("SetInputToWaveFile($WavPath)", _SAPI_RECOGNITION_SCRIPT)
+        self.assertNotIn("$Input", _SAPI_RECOGNITION_SCRIPT)
+
     def test_transcribe_uses_recognized_text_when_available(self):
         class FakeRecognizer(Phase1Responder):
             def _recognize(self, backend, caller_pcm):

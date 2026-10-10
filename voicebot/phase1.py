@@ -295,7 +295,7 @@ class Phase1Responder:
             script.write_text(_SAPI_RECOGNITION_SCRIPT, encoding="utf-8")
             command = [
                 exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
-                "-Input", str(wav_path),
+                "-WavPath", str(wav_path),
             ]
             proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                   text=True, timeout=self.stt_timeout)
@@ -339,14 +339,14 @@ finally {
 
 _SAPI_RECOGNITION_SCRIPT = r"""
 param(
-    [Parameter(Mandatory=$true)][string]$Input
+    [Parameter(Mandatory=$true)][string]$WavPath
 )
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Speech
 $engine = New-Object System.Speech.Recognition.SpeechRecognitionEngine
 try {
     $engine.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar))
-    $engine.SetInputToWaveFile($Input)
+    $engine.SetInputToWaveFile($WavPath)
     $result = $engine.Recognize()
     if ($null -eq $result) {
         @{ text = ""; confidence = 0.0 } | ConvertTo-Json -Compress
