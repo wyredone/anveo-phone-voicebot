@@ -21,6 +21,8 @@ def main(argv=None):
     ai_server.add_argument("--output", default="artifacts/calls")
     ai_server.add_argument("--no-capture", action="store_true", help="Only save PCM statistics")
     ai_server.add_argument("--response-text", default="Hello. Phase one is connected. I heard you through the phone bridge.")
+    ai_server.add_argument("--response-mode", choices=("fixed", "echo"), default="echo",
+                           help="fixed speaks --response-text; echo speaks back the recognized caller text")
     ai_server.add_argument("--piper-model", help="Optional Piper .onnx voice model for spoken response")
     ai_server.add_argument("--piper-config", help="Optional Piper model JSON config")
     ai_server.add_argument("--piper-exe", default="piper", help="Piper executable name or full path")
@@ -60,8 +62,10 @@ def main(argv=None):
             from .phase1 import Phase1Responder
             responder = Phase1Responder(args.response_text, args.piper_model, args.piper_config, args.piper_exe,
                                         args.tts_backend, args.sapi_voice, args.sapi_rate, args.sapi_volume,
-                                        args.tts_timeout, args.stt_backend, args.stt_timeout)
-            responder.prepare()
+                                        args.tts_timeout, args.stt_backend, args.stt_timeout,
+                                        args.response_mode)
+            if args.response_mode == "fixed":
+                responder.prepare()
             bridge = BridgeServer(token, args.port, args.output, capture=not args.no_capture, responder=responder)
             test_audio = "phase1 generated response"
         else:

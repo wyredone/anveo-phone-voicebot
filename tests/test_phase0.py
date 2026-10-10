@@ -246,6 +246,26 @@ class Phase1Tests(unittest.TestCase):
         self.assertEqual(transcript.text, "hello from the caller")
         self.assertEqual(transcript.source, "sapi")
 
+    def test_echo_response_uses_recognized_transcript(self):
+        class EchoResponder(Phase1Responder):
+            def _recognize(self, backend, caller_pcm):
+                return "hello from the caller"
+
+            def _synthesize(self, backend, text):
+                self.last_text = text
+                return tone(0.02, 880)
+
+        responder = EchoResponder("Fixed text.", tts_backend="sapi", stt_backend="sapi",
+                                  response_mode="echo")
+        response = responder.respond(tone(0.4, 660))
+        self.assertEqual(response.transcript, "hello from the caller")
+        self.assertIn("I heard you say: hello from the caller.", response.text)
+        self.assertEqual(response.text, responder.last_text)
+
+    def test_bad_response_mode_rejected(self):
+        with self.assertRaises(ValueError):
+            Phase1Responder(response_mode="ramble")
+
     def test_respond_reports_transcript_source_and_errors(self):
         class BrokenRecognizer(Phase1Responder):
             def _recognize(self, backend, caller_pcm):

@@ -152,6 +152,7 @@
       <pre><code>launch_phase1.bat "F:\anveophone"</code></pre>
       <p>Before calling, confirm the Phase 1 server window prints <code>phase1_response_prepared</code>. <code>source: sapi</code> means spoken audio is ready; <code>fallback_tone_after_tts_error</code> means the call will use the tone pattern and the error is printed in that same line.</p>
       <p>The same test also tries local Windows speech recognition. After the call, check the JSON report for <code>phase1_transcript_source</code>. <code>sapi</code> means caller words were recognized; <code>none</code> means the report kept the signal summary and may include recognition errors.</p>
+      <p>By default, the launcher uses <code>--response-mode echo</code>, so the spoken reply should acknowledge what Windows thought the caller said.</p>
       <p>Optional spoken response with Piper:</p>
       <pre><code>set VOICEBOT_PIPER_MODEL=C:\path\to\voice.onnx
 set VOICEBOT_PIPER_CONFIG=C:\path\to\voice.onnx.json

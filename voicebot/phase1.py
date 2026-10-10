@@ -131,11 +131,14 @@ class Phase1Responder:
                  piper_config: str | None = None, piper_exe: str = "piper",
                  tts_backend: str = "auto", sapi_voice: str | None = None,
                  sapi_rate: int = 0, sapi_volume: int = 100, tts_timeout: float = 8.0,
-                 stt_backend: str = "auto", stt_timeout: float = 8.0):
+                 stt_backend: str = "auto", stt_timeout: float = 8.0,
+                 response_mode: str = "fixed"):
         if tts_backend not in {"auto", "piper", "sapi", "tone"}:
             raise ValueError("tts_backend must be one of: auto, piper, sapi, tone")
         if stt_backend not in {"auto", "sapi", "off"}:
             raise ValueError("stt_backend must be one of: auto, sapi, off")
+        if response_mode not in {"fixed", "echo"}:
+            raise ValueError("response_mode must be one of: fixed, echo")
         self.response_text = response_text or "Hello. Phase one is connected. I heard you through the phone bridge."
         self.piper_model = piper_model
         self.piper_config = piper_config
@@ -147,6 +150,7 @@ class Phase1Responder:
         self.tts_timeout = max(1.0, tts_timeout)
         self.stt_backend = stt_backend
         self.stt_timeout = max(1.0, stt_timeout)
+        self.response_mode = response_mode
         self._prepared: PreparedAudio | None = None
 
     def prepare(self) -> PreparedAudio:
@@ -169,11 +173,29 @@ class Phase1Responder:
         signal_summary = f"caller audio detected, {len(caller_pcm) / (RATE * 2):.2f} seconds, rms {stats['rms']}"
         transcript = self.transcribe(caller_pcm)
         transcript_text = transcript.text or signal_summary
-        prepared = self.prepare()
-        return VoiceResponse(pcm=prepared.pcm, text=self.response_text,
+        if self.response_mode == "fixed":
+            response_text = self.response_text
+            prepared = self.prepare()
+        else:
+            response_text = self._echo_response_text(transcript.text)
+            prepared = self._build_response_audio(response_text)
+            print(json.dumps({"event": "phase2_dynamic_response_prepared",
+                              "source": prepared.source,
+                              "frames": frame_count(prepared.pcm),
+                              "seconds": round(len(prepared.pcm) / (RATE * 2), 3),
+                              "text": response_text}), flush=True)
+        return VoiceResponse(pcm=prepared.pcm, text=response_text,
                              source=prepared.source, transcript=transcript_text,
                              transcript_source=transcript.source,
                              transcript_errors=transcript.errors)
+
+    def _echo_response_text(self, transcript: str) -> str:
+        clean = " ".join(transcript.split())
+        if not clean:
+            return "I heard audio, but I could not recognize the words yet. Phase two speech recognition is connected."
+        if len(clean) > 160:
+            clean = clean[:157].rstrip() + "..."
+        return f"I heard you say: {clean}. Phase two speech recognition is connected."
 
     def transcribe(self, caller_pcm: bytes) -> Transcript:
         errors = []
@@ -188,13 +210,14 @@ class Phase1Responder:
             print(json.dumps({"event": "stt_fallback", "errors": errors}), flush=True)
         return Transcript(text="", source="none", errors=errors)
 
-    def _build_response_audio(self) -> PreparedAudio:
+    def _build_response_audio(self, text: str | None = None) -> PreparedAudio:
         source = "fallback_tone"
         pcm = fallback_response_pcm()
         errors = []
+        text = self.response_text if text is None else text
         for backend in self._backend_order():
             try:
-                synthesized = self._synthesize(backend, self.response_text)
+                synthesized = self._synthesize(backend, text)
                 if synthesized:
                     return PreparedAudio(pcm=synthesized, source=backend, errors=errors)
             except Exception as exc:
