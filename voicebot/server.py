@@ -91,6 +91,8 @@ class BridgeServer:
         response_text = ""
         response_source = "static"
         transcript = ""
+        transcript_source = ""
+        transcript_errors = []
         deadline = time.monotonic() + (1.0 if active_response is not None else 3600.0)
         last_rx = time.monotonic()
         offset = 0
@@ -122,10 +124,12 @@ class BridgeServer:
                             response_text = generated.text
                             response_source = generated.source
                             transcript = generated.transcript
+                            transcript_source = generated.transcript_source
+                            transcript_errors = generated.transcript_errors
                             deadline = time.monotonic()
                             print(json.dumps({"event": "phase1_response_ready", "session_id": session_id,
                                               "source": response_source, "text": response_text,
-                                              "transcript": transcript,
+                                              "transcript": transcript, "transcript_source": transcript_source,
                                               "frames": frame_count(active_response)}), flush=True)
                 now = time.monotonic()
                 if now - last_rx > 5:
@@ -151,6 +155,8 @@ class BridgeServer:
             report["live_caller_hearing_verified"] = False
             if self.responder:
                 report["phase1_transcript"] = transcript
+                report["phase1_transcript_source"] = transcript_source
+                report["phase1_transcript_errors"] = transcript_errors
                 report["phase1_response_text"] = response_text
                 report["phase1_response_source"] = response_source
             report_path = self.output_dir / (capture_id + ".json")

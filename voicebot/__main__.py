@@ -29,6 +29,12 @@ def main(argv=None):
     ai_server.add_argument("--sapi-voice", help="Optional Windows SAPI voice name")
     ai_server.add_argument("--sapi-rate", type=int, default=0, help="Windows SAPI rate, -10 to 10")
     ai_server.add_argument("--sapi-volume", type=int, default=100, help="Windows SAPI volume, 0 to 100")
+    ai_server.add_argument("--tts-timeout", type=float, default=8.0,
+                           help="Seconds to wait while preparing local TTS before falling back to tones")
+    ai_server.add_argument("--stt-backend", choices=("auto", "sapi", "off"), default="auto",
+                           help="Caller speech recognition backend. auto uses Windows SAPI when available.")
+    ai_server.add_argument("--stt-timeout", type=float, default=8.0,
+                           help="Seconds to wait for local speech recognition")
     host = commands.add_parser("host", help="Launch AnveoPhone with optional live media adapter")
     host.add_argument("--anveophone", required=True)
     host.add_argument("--arm-next-call", action="store_true")
@@ -53,7 +59,9 @@ def main(argv=None):
         if args.command == "serve-ai":
             from .phase1 import Phase1Responder
             responder = Phase1Responder(args.response_text, args.piper_model, args.piper_config, args.piper_exe,
-                                        args.tts_backend, args.sapi_voice, args.sapi_rate, args.sapi_volume)
+                                        args.tts_backend, args.sapi_voice, args.sapi_rate, args.sapi_volume,
+                                        args.tts_timeout, args.stt_backend, args.stt_timeout)
+            responder.prepare()
             bridge = BridgeServer(token, args.port, args.output, capture=not args.no_capture, responder=responder)
             test_audio = "phase1 generated response"
         else:

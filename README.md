@@ -73,6 +73,11 @@ Run from the menu with **H**, or directly:
    default. With Piper configured, Piper is used first. If TTS fails, it falls
    back to the tone pattern.
 
+The Phase 1 server now prepares response audio before it listens for a call. Look
+for `phase1_response_prepared` in the server window. `source: sapi` means Windows
+speech is ready. `fallback_tone_after_tts_error` means it will play the tone
+pattern and the same line includes the TTS error.
+
 Optional Piper setup before launching:
 
 ```bat
@@ -98,6 +103,13 @@ Per-call JSON reports include `mode: phase1`, a placeholder transcript summary,
 the response text, and the response source (`piper`, `fallback_tone`, or
 `fallback_tone_after_tts_error`). On Windows, a successful built-in spoken response
 reports `phase1_response_source: sapi`.
+
+Phase 2 starts caller speech recognition. With `--stt-backend auto`, Windows uses
+SAPI dictation recognition on the caller turn. Reports include
+`phase1_transcript_source`; `sapi` means recognized words were logged, while `none`
+means recognition returned nothing or failed and `phase1_transcript_errors` has
+details. The spoken response remains the known fixed phrase while recognition is
+being validated.
 
 ## Validation
 

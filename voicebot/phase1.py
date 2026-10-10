@@ -108,15 +108,34 @@ class VoiceResponse:
     text: str
     source: str
     transcript: str
+    transcript_source: str
+    transcript_errors: list[dict[str, str]]
+
+
+@dataclass
+class PreparedAudio:
+    pcm: bytes
+    source: str
+    errors: list[dict[str, str]]
+
+
+@dataclass
+class Transcript:
+    text: str
+    source: str
+    errors: list[dict[str, str]]
 
 
 class Phase1Responder:
     def __init__(self, response_text: str | None = None, piper_model: str | None = None,
                  piper_config: str | None = None, piper_exe: str = "piper",
                  tts_backend: str = "auto", sapi_voice: str | None = None,
-                 sapi_rate: int = 0, sapi_volume: int = 100):
+                 sapi_rate: int = 0, sapi_volume: int = 100, tts_timeout: float = 8.0,
+                 stt_backend: str = "auto", stt_timeout: float = 8.0):
         if tts_backend not in {"auto", "piper", "sapi", "tone"}:
             raise ValueError("tts_backend must be one of: auto, piper, sapi, tone")
+        if stt_backend not in {"auto", "sapi", "off"}:
+            raise ValueError("stt_backend must be one of: auto, sapi, off")
         self.response_text = response_text or "Hello. Phase one is connected. I heard you through the phone bridge."
         self.piper_model = piper_model
         self.piper_config = piper_config
@@ -125,25 +144,65 @@ class Phase1Responder:
         self.sapi_voice = sapi_voice
         self.sapi_rate = max(-10, min(10, sapi_rate))
         self.sapi_volume = max(0, min(100, sapi_volume))
+        self.tts_timeout = max(1.0, tts_timeout)
+        self.stt_backend = stt_backend
+        self.stt_timeout = max(1.0, stt_timeout)
+        self._prepared: PreparedAudio | None = None
+
+    def prepare(self) -> PreparedAudio:
+        if self._prepared:
+            return self._prepared
+        self._prepared = self._build_response_audio()
+        event = {
+            "event": "phase1_response_prepared",
+            "source": self._prepared.source,
+            "frames": frame_count(self._prepared.pcm),
+            "seconds": round(len(self._prepared.pcm) / (RATE * 2), 3),
+        }
+        if self._prepared.errors:
+            event["errors"] = self._prepared.errors
+        print(json.dumps(event), flush=True)
+        return self._prepared
 
     def respond(self, caller_pcm: bytes) -> VoiceResponse:
         stats = _pcm_stats(caller_pcm)
-        transcript = f"caller audio detected, {len(caller_pcm) / (RATE * 2):.2f} seconds, rms {stats['rms']}"
-        text = self.response_text
+        signal_summary = f"caller audio detected, {len(caller_pcm) / (RATE * 2):.2f} seconds, rms {stats['rms']}"
+        transcript = self.transcribe(caller_pcm)
+        transcript_text = transcript.text or signal_summary
+        prepared = self.prepare()
+        return VoiceResponse(pcm=prepared.pcm, text=self.response_text,
+                             source=prepared.source, transcript=transcript_text,
+                             transcript_source=transcript.source,
+                             transcript_errors=transcript.errors)
+
+    def transcribe(self, caller_pcm: bytes) -> Transcript:
+        errors = []
+        for backend in self._stt_backend_order():
+            try:
+                text = self._recognize(backend, caller_pcm)
+                if text:
+                    return Transcript(text=text, source=backend, errors=errors)
+            except Exception as exc:
+                errors.append({"backend": backend, "error": str(exc)})
+        if errors:
+            print(json.dumps({"event": "stt_fallback", "errors": errors}), flush=True)
+        return Transcript(text="", source="none", errors=errors)
+
+    def _build_response_audio(self) -> PreparedAudio:
         source = "fallback_tone"
         pcm = fallback_response_pcm()
         errors = []
         for backend in self._backend_order():
             try:
-                synthesized = self._synthesize(backend, text)
+                synthesized = self._synthesize(backend, self.response_text)
                 if synthesized:
-                    return VoiceResponse(pcm=synthesized, text=text, source=backend, transcript=transcript)
+                    return PreparedAudio(pcm=synthesized, source=backend, errors=errors)
             except Exception as exc:
                 errors.append({"backend": backend, "error": str(exc)})
         if errors:
             source = "fallback_tone_after_tts_error"
             print(json.dumps({"event": "tts_fallback", "errors": errors}), flush=True)
-        return VoiceResponse(pcm=pcm, text=text, source=source, transcript=transcript)
+        return PreparedAudio(pcm=pcm, source=source, errors=errors)
 
     def _backend_order(self) -> list[str]:
         if self.tts_backend == "tone":
@@ -159,12 +218,24 @@ class Phase1Responder:
             order.append("sapi")
         return order
 
+    def _stt_backend_order(self) -> list[str]:
+        if self.stt_backend == "off":
+            return []
+        if self.stt_backend == "sapi":
+            return ["sapi"]
+        return ["sapi"] if sys.platform == "win32" else []
+
     def _synthesize(self, backend: str, text: str) -> bytes | None:
         if backend == "piper":
             return self._piper(text)
         if backend == "sapi":
             return self._sapi(text)
         raise ValueError(f"Unknown TTS backend: {backend}")
+
+    def _recognize(self, backend: str, caller_pcm: bytes) -> str | None:
+        if backend == "sapi":
+            return self._sapi_recognize(caller_pcm)
+        raise ValueError(f"Unknown STT backend: {backend}")
 
     def _piper(self, text: str) -> bytes | None:
         if not self.piper_model:
@@ -179,7 +250,7 @@ class Phase1Responder:
             if self.piper_config:
                 command.extend(["--config", self.piper_config])
             proc = subprocess.run(command, input=text, text=True, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, timeout=120)
+                                  stderr=subprocess.PIPE, timeout=self.tts_timeout)
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr.strip() or "Piper failed")
             pcm = wav_to_bridge_pcm(output)
@@ -203,13 +274,37 @@ class Phase1Responder:
             if self.sapi_voice:
                 command.extend(["-Voice", self.sapi_voice])
             proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                  text=True, timeout=120)
+                                  text=True, timeout=self.tts_timeout)
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "SAPI failed")
             pcm = wav_to_bridge_pcm(output)
             if not pcm:
                 raise RuntimeError("SAPI produced empty audio")
             return pcm
+
+    def _sapi_recognize(self, caller_pcm: bytes) -> str | None:
+        if sys.platform != "win32":
+            return None
+        exe = shutil.which("powershell.exe") or shutil.which("powershell") or "powershell.exe"
+        with tempfile.TemporaryDirectory() as folder:
+            wav_path = Path(folder) / "caller-turn.wav"
+            script = Path(folder) / "sapi-recognize.ps1"
+            with wave.open(str(wav_path), "wb") as wav:
+                wav.setparams((1, 2, RATE, 0, "NONE", "not compressed"))
+                wav.writeframes(caller_pcm)
+            script.write_text(_SAPI_RECOGNITION_SCRIPT, encoding="utf-8")
+            command = [
+                exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
+                "-Input", str(wav_path),
+            ]
+            proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  text=True, timeout=self.stt_timeout)
+            if proc.returncode != 0:
+                raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "SAPI recognition failed")
+            data = json.loads(proc.stdout or "{}")
+            if data.get("error"):
+                raise RuntimeError(str(data["error"]))
+            return str(data.get("text") or "").strip() or None
 
 
 def frame_count(pcm: bytes) -> int:
@@ -238,5 +333,31 @@ try {
 }
 finally {
     $synth.Dispose()
+}
+"""
+
+
+_SAPI_RECOGNITION_SCRIPT = r"""
+param(
+    [Parameter(Mandatory=$true)][string]$Input
+)
+$ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.Speech
+$engine = New-Object System.Speech.Recognition.SpeechRecognitionEngine
+try {
+    $engine.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar))
+    $engine.SetInputToWaveFile($Input)
+    $result = $engine.Recognize()
+    if ($null -eq $result) {
+        @{ text = ""; confidence = 0.0 } | ConvertTo-Json -Compress
+    } else {
+        @{ text = $result.Text; confidence = $result.Confidence } | ConvertTo-Json -Compress
+    }
+}
+catch {
+    @{ text = ""; confidence = 0.0; error = $_.Exception.Message } | ConvertTo-Json -Compress
+}
+finally {
+    $engine.Dispose()
 }
 """

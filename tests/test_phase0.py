@@ -225,11 +225,61 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(report["mode"], "phase1")
         self.assertTrue(report["bidirectional_pcm_observed"])
         self.assertIn("caller audio detected", report["phase1_transcript"])
+        self.assertEqual(report["phase1_transcript_source"], "none")
         self.assertEqual(report["phase1_response_source"], "fallback_tone")
         self.assertGreater(sum(byte != 0 for byte in collected), 1000)
 
 
 class Phase1Tests(unittest.TestCase):
+    def test_transcribe_uses_recognized_text_when_available(self):
+        class FakeRecognizer(Phase1Responder):
+            def _recognize(self, backend, caller_pcm):
+                return "hello from the caller"
+
+        responder = FakeRecognizer("Test response.", stt_backend="sapi")
+        transcript = responder.transcribe(tone(0.4, 660))
+        self.assertEqual(transcript.text, "hello from the caller")
+        self.assertEqual(transcript.source, "sapi")
+
+    def test_respond_reports_transcript_source_and_errors(self):
+        class BrokenRecognizer(Phase1Responder):
+            def _recognize(self, backend, caller_pcm):
+                raise RuntimeError("recognition unavailable")
+
+        responder = BrokenRecognizer("Test response.", tts_backend="tone", stt_backend="sapi")
+        response = responder.respond(tone(0.4, 660))
+        self.assertIn("caller audio detected", response.transcript)
+        self.assertEqual(response.transcript_source, "none")
+        self.assertEqual(response.transcript_errors[0]["backend"], "sapi")
+
+    def test_prepare_caches_generated_audio_before_call(self):
+        class FakeResponder(Phase1Responder):
+            def __init__(self):
+                super().__init__("Test response.", tts_backend="sapi")
+                self.calls = 0
+
+            def _synthesize(self, backend, text):
+                self.calls += 1
+                return tone(0.02, 880)
+
+        responder = FakeResponder()
+        first = responder.prepare()
+        second = responder.respond(tone(0.4, 660))
+        self.assertEqual(first.source, "sapi")
+        self.assertEqual(second.source, "sapi")
+        self.assertEqual(responder.calls, 1)
+
+    def test_prepare_fallback_is_ready_after_tts_error(self):
+        class BrokenResponder(Phase1Responder):
+            def _synthesize(self, backend, text):
+                raise RuntimeError("boom")
+
+        responder = BrokenResponder("Test response.", tts_backend="sapi")
+        prepared = responder.prepare()
+        self.assertEqual(prepared.source, "fallback_tone_after_tts_error")
+        self.assertTrue(prepared.pcm)
+        self.assertEqual(prepared.errors[0]["backend"], "sapi")
+
     def test_auto_backend_order_prefers_configured_local_tts(self):
         responder = Phase1Responder("Test response.", tts_backend="auto")
         expected = ["sapi"] if sys.platform == "win32" else []
